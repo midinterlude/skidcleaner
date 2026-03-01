@@ -78,7 +78,7 @@ skidcleaner.exe
 - ✅ Auto-launch Roblox after cleaning
  
 ### Advanced Ban Evasion
-- ✅ **ByeBanAsync Python Port** - Imported ByeBanAsync into python for proven MAC address spoofing 
+- ✅ **ByeBanAsync Python Port** - Imported ByeBanAsync into python for proven MAC address spoofing (credits to: centerepic)
 - ✅ **Registry cleanup** - Remove all Roblox traces
 - ✅ **Network adapter management** - Restart adapters after changes
  
