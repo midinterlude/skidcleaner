@@ -114,9 +114,7 @@ The log includes console history, command outputs, file operations, and error me
 2. **Download Failures**
    - Check internet connection
    - Verify firewall/antivirus isn't blocking
-   - Try using a VPN if downloads fail
-  
-   - We recommend Cloudflare Warp or ProtonVPN
+   - Try using a VPN if downloads fail (We recommend Cloudflare Warp or ProtonVPN)
  
 3. **Configuration Not Loading**
    - Ensure `skidcleaner.config.json` is in the same directory
