@@ -31,8 +31,7 @@ https://github.com/midinterlude/skidcleaner./releases/tag/skidcleaner
 - Launch Roblox after cleaning
 
 ### 🛡️ **Advanced Ban Evasion**
-- **Overkill Mode**: Maximum privacy and security for users who want zero compromises
-- Built-in ByeBanAsync functionality (Python implementation)
+- **Overkill**: Maximum privacy and security for users who want zero compromises
 - MAC address spoofing capability
 - Complete cookie deletion
 - Network adapter management
@@ -47,27 +46,27 @@ https://github.com/midinterlude/skidcleaner./releases/tag/skidcleaner
 
 ## Installation
 
+### Recommended Installation:
+
+- go to https://github.com/midinterlude/skidcleaner./releases/tag/skidcleaner
+- download skidcleaner.exe and cleaner_config.json
+- put in the same folder and run
+
+### Python Installation
+
 1. Ensure Python 3.7+ is installed
-2. Run the script as Administrator (required for registry operations)
-3. Install dependencies automatically handled by script
+2. Install cleaner.py
+3. Run the script as Administrator (required for registry operations)
+4. Install dependencies automatically handled by script
 
 ## Usage
 
-### Standard Mode
-```bash
-python cleaner.py
-```
-Runs with default configuration settings.
+### Standard Usage (Python file)
 
-### Advanced Mode
+press win+r and type cmd
 ```bash
 python cleaner.py
 ```
-Select option `2` for advanced configuration editor where you can:
-- Toggle individual cleaning operations
-- Customize paths and processes
-- Set automatic behaviors
-- Save configuration preferences
 
 ## Overkill - Zero Compromise Approach
 
