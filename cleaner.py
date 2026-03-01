@@ -8,20 +8,124 @@ import urllib.request
 import json
 import stat
 import uuid
+import time
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import parse_qs
 
+# Global status tracking for web GUI
+status_updates = []
+server_running = False
+
+class StatusHandler(BaseHTTPRequestHandler):
+    """HTTP request handler for status updates."""
+    
+    def do_GET(self):
+        global status_updates
+        
+        if self.path == '/status':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            # Return status updates as JSON
+            response = {
+                'updates': status_updates[-50:],  # Last 50 updates
+                'timestamp': time.time()
+            }
+            self.wfile.write(json.dumps(response).encode())
+        elif self.path == '/health':
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"status": "running"}')
+        else:
+            self.send_response(404)
+            self.end_headers()
+    
+    def do_POST(self):
+        if self.path == '/config':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length)
+            
+            try:
+                config = json.loads(post_data.decode())
+                config_path = os.path.join(os.path.dirname(__file__), 'cleaner_config.json')
+                with open(config_path, 'w') as f:
+                    json.dump(config, f, indent=4)
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(b'{"status": "saved"}')
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(f'{{"error": "{str(e)}"}}'.encode())
+        else:
+            self.send_response(404)
+            self.end_headers()
+    
+    def log_message(self, format, *args):
+        # Suppress HTTP server logs
+        pass
+
+def start_status_server(port=8765):
+    """Start HTTP server for status updates in a separate thread."""
+    global server_running
+    
+    def run_server():
+        global server_running
+        try:
+            server = HTTPServer(('localhost', port), StatusHandler)
+            server_running = True
+            server.serve_forever()
+        except Exception as e:
+            print(f"Status server error: {e}")
+        finally:
+            server_running = False
+    
+    server_thread = threading.Thread(target=run_server, daemon=True)
+    server_thread.start()
+    return port
+
+def add_status_update(message, level='info'):
+    """Add a status update for web GUI."""
+    global status_updates
+    status_updates.append({
+        'message': message,
+        'level': level,
+        'timestamp': time.time()
+    })
+    
+    # Keep only last 100 updates to prevent memory issues
+    if len(status_updates) > 100:
+        status_updates = status_updates[-100:]
+
+def enhanced_log(message):
+    """Enhanced log function that also updates web GUI status."""
+    # Call original log function
+    log(message)
+    
+    # Add to status updates for web GUI
+    add_status_update(message, 'info')
 
 def load_config():
     """Load configuration from JSON file or create defaults."""
     config_path = os.path.join(os.path.dirname(__file__), 'cleaner_config.json')
-    
     try:
         if os.path.exists(config_path):
             with open(config_path, 'r') as f:
                 return json.load(f)
-    except:
+    except Exception as e:
+        print(f"Warning: Could not load config file: {e}")
         pass
-    
     # Return default config if file doesn't exist or is invalid
+    return get_default_config()
+
+def get_default_config():
+    """Get the default configuration."""
     return {
         "general": {
             "log_enabled": True,
@@ -59,8 +163,8 @@ def load_config():
         "advanced": {
             "show_command_output": True,
             "force_file_deletion": True,
-            "skip_confirmation_prompts": True,
-            "auto_restart_after_cleaning": True
+            "skip_confirmation_prompts": False,
+            "auto_restart_after_cleaning": False
         }
     }
 
@@ -74,100 +178,14 @@ def save_config(config):
     except:
         return False
 
-def edit_config_interactive(config):
-    """Interactive configuration editor."""
-    print("\n" + "="*60)
-    print("ADVANCED CONFIGURATION EDITOR")
-    print("="*60)
-    
-    while True:
-        print("\nSelect section to edit:")
-        sections = list(config.keys())
-        for i, section in enumerate(sections, 1):
-            print(f"{i}. {section.capitalize()}")
-        print(f"{len(sections)+1}. Save and Run")
-        print(f"{len(sections)+2}. Save and Exit (without running)")
-        print(f"{len(sections)+3}. Exit without Saving")
-        
-        choice = input("\nEnter choice: ").strip()
-        
-        if choice == str(len(sections)+1):
-            if save_config(config):
-                print("✅ Configuration saved successfully!")
-                print("🚀 Starting cleaning with new settings...")
-                return True  # Return True to indicate we should run
-            else:
-                print("❌ Failed to save configuration")
-                return False
-        elif choice == str(len(sections)+2):
-            if save_config(config):
-                print("✅ Configuration saved successfully!")
-            else:
-                print("❌ Failed to save configuration")
-            return False  # Return False to indicate we should not run
-        elif choice == str(len(sections)+3):
-            return None  # Return None to indicate cancel
-        elif choice.isdigit() and 1 <= int(choice) <= len(sections):
-            edit_section(config, sections[int(choice)-1])
-        else:
-            print("❌ Invalid choice")
-
-def edit_section(config, section_name):
-    """Edit a specific configuration section."""
-    section = config[section_name]
-    print(f"\n--- Editing {section_name.upper()} ---")
-    
-    for key, value in section.items():
-        if isinstance(value, bool):
-            current = "y" if value else "n"
-            new_val = input(f"{key} (y/n, current: {current}): ").strip().lower()
-            if new_val in ['y', 'n']:
-                section[key] = new_val == 'y'
-        elif isinstance(value, list):
-            print(f"\nCurrent {key}:")
-            for i, item in enumerate(value, 1):
-                print(f"  {i}. {item}")
-            print("Options: add, remove, done")
-            while True:
-                action = input(f"Action for {key}: ").strip().lower()
-                if action == 'done':
-                    break
-                elif action == 'add':
-                    new_item = input("Add item: ").strip()
-                    if new_item:
-                        section[key].append(new_item)
-                        print(f"✅ Added: {new_item}")
-                elif action == 'remove':
-                    try:
-                        index = int(input("Remove item number: ")) - 1
-                        if 0 <= index < len(section[key]):
-                            removed = section[key].pop(index)
-                            print(f"✅ Removed: {removed}")
-                    except:
-                        print("❌ Invalid item number")
-                else:
-                    print("❌ Invalid action")
-        else:
-            new_val = input(f"{key} (current: {value}): ").strip()
-            if new_val:
-                try:
-                    if isinstance(value, int):
-                        section[key] = int(new_val)
-                    else:
-                        section[key] = new_val
-                except:
-                    print("❌ Invalid value type")
-    
-    config[section_name] = section
 
 def ensure_dependencies():
     """Install any third‑party packages the script requires.
-
     This function is called at startup and uses pip to install missing
     packages before the rest of the script imports them.
     """
     missing = []
-    for pkg in ("pyuac", "requests"):
+    for pkg in ("pyuac", "requests", "tqdm"):
         try:
             __import__(pkg)
         except ImportError:
@@ -175,15 +193,35 @@ def ensure_dependencies():
     if missing:
         print(f"Installing missing packages: {', '.join(missing)}")
         subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
-
-
 ensure_dependencies()
-
 import pyuac
+# Custom exception classes for better error handling
+class RobloxCleanerError(Exception):
+    """Base exception for skidcleaner operations."""
 
-
+    def __init__(self, message, operation=None, details=None):
+        super().__init__(message)
+        self.operation = operation
+        self.details = details or {}
+class ConfigurationError(RobloxCleanerError):
+    """Raised when there's an issue with configuration."""
+    pass
+class DownloadError(RobloxCleanerError):
+    """Raised when download operations fail."""
+    pass
+class FileOperationError(RobloxCleanerError):
+    """Raised when file operations fail."""
+    pass
+class ProcessError(RobloxCleanerError):
+    """Raised when process operations fail."""
+    pass
+class NetworkError(RobloxCleanerError):
+    """Raised when network operations fail."""
+    pass
+class RegistryError(RobloxCleanerError):
+    """Raised when registry operations fail."""
+    pass
 LP = os.path.expandvars(r"%temp%\Roblox_Cleaner_Log.txt")
-
 LOG = True
 OPEN_LOG = True
 
@@ -193,68 +231,124 @@ def capture_console_history():
         # Try to get console buffer content (Windows specific)
         import ctypes
         from ctypes import wintypes
-        
         # Define the console screen buffer info structure
         class COORD(ctypes.Structure):
             _fields_ = [("X", ctypes.c_short), ("Y", ctypes.c_short)]
-        
         class SMALL_RECT(ctypes.Structure):
             _fields_ = [("Left", ctypes.c_short), ("Top", ctypes.c_short),
                        ("Right", ctypes.c_short), ("Bottom", ctypes.c_short)]
-        
         class CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
             _fields_ = [("dwSize", COORD), ("dwCursorPosition", COORD),
                        ("wAttributes", ctypes.c_ushort), ("srWindow", SMALL_RECT),
                        ("dwMaximumWindowSize", COORD)]
-        
         # Windows console API to get screen buffer
         kernel32 = ctypes.windll.kernel32
         h_std_out = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
-        
         # Get console screen buffer info
         csbi = CONSOLE_SCREEN_BUFFER_INFO()
         kernel32.GetConsoleScreenBufferInfo(h_std_out, ctypes.byref(csbi))
-        
-        # Calculate buffer size
-        buffer_size = csbi.dwSize.X * csbi.dwSize.Y
-        
-        # Create buffer to read console content
-        buffer = (ctypes.c_char * buffer_size)()
-        chars_read = wintypes.DWORD()
-        
-        # Read entire console buffer
-        read_coord = COORD(0, 0)
-        kernel32.ReadConsoleOutputCharacterA(
-            h_std_out, buffer, buffer_size, read_coord, ctypes.byref(chars_read)
-        )
-        
-        # Convert to string and clean up
-        console_content = buffer.value.decode('utf-8', errors='ignore')
-        
-        # Split into lines and remove empty ones
-        lines = [line.rstrip() for line in console_content.split('\n') if line.strip()]
-        
+        # Read line by line instead of entire buffer at once
+        lines = []
+        buffer_width = csbi.dwSize.X
+        buffer_height = csbi.dwSize.Y
+        for y in range(buffer_height):
+            # Read each line separately
+            line_buffer = (ctypes.c_char * buffer_width)()
+            chars_read = wintypes.DWORD()
+            read_coord = COORD(0, y)
+            kernel32.ReadConsoleOutputCharacterA(
+                h_std_out, line_buffer, buffer_width, read_coord, ctypes.byref(chars_read)
+            )
+            # Convert to string and clean up
+            line_content = line_buffer.value.decode('utf-8', errors='ignore').rstrip()
+            # Skip empty lines and progress bar lines
+            if line_content.strip():
+                # Skip lines that look like progress bars
+                if ('|' in line_content and '%' in line_content and 
+                    any(char in line_content for char in ['█', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '│'])):
+                    continue  # Skip progress bar lines
+                # Skip lines that are just progress bar characters
+                if any(char in line_content for char in ['█', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '│']) and len(line_content.strip()) < 100:
+                    continue  # Skip short lines with only progress bar characters
+                lines.append(line_content)
         if lines:
             log("=== PREVIOUS CONSOLE CONTENT ===")
             for line in lines:
                 log(line)
             log("=== END PREVIOUS CONSOLE CONTENT ===\n")
-            
     except Exception as e:
         # Fallback: try a simpler approach or just note that we couldn't capture
         log(f"=== Could not capture previous console content: {e} ===\n")
 
 def log(message):
     """Print to console and optionally append to the log file."""
-    print(message)
+    # Check if tqdm is active and handle accordingly
+    import sys
+    
+    # Check if this is a progress bar
+    is_progress_bar = any(char in message for char in ['█', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '│'])
+    
+    if is_progress_bar:
+        # Check if this is a 100% complete progress bar
+        if '100%' in message:
+            print(message, end='\r')  # Print the final progress bar
+            print()  # Add newline to move to next line
+            return
+        else:
+            # This is an intermediate progress bar, overwrite the line
+            print(message, end='\r')
+            return
+    elif message.endswith('downloaded and extracted') or message.endswith('packages') or 'Successfully downloaded' in message:
+        # This is a completion message, print normally (should already be on new line)
+        print(message)
+    else:
+        # Regular message, print normally
+        print(message)
     if LOG:
         try:
+            # Clean up the message for log file (remove progress bar artifacts)
+            clean_message = message.replace('\r', '')
+            # Only filter out actual progress bar patterns, not regular messages with %
+            if ('|' in clean_message and '%' in clean_message and 
+                any(char in clean_message for char in ['█', '▏', '▎', '▍', '▌', '▋', '▊', '▉', '│'])):
+                # This looks like a progress bar line, skip logging it
+                return
             with open(LP, 'a', encoding='utf-8') as f:
-                f.write(message + "\n")
+                f.write(clean_message + "\n")
                 f.flush()  # Force write to disk immediately
         except Exception as e:
             print(f"Log write error: {e}")
 
+def validate_config(config):
+    """Validate configuration structure and values."""
+    try:
+        required_sections = ["general", "cleaning", "roblox", "tools", "paths", "processes", "registry", "advanced"]
+        # Check all required sections exist
+        for section in required_sections:
+            if section not in config:
+                print(f"❌ Missing configuration section: {section}")
+                return False
+        # Validate boolean values
+        boolean_sections = ["general", "cleaning", "roblox", "tools", "advanced"]
+        for section in boolean_sections:
+            for key, value in config[section].items():
+                if not isinstance(value, bool):
+                    print(f"❌ Invalid boolean value in {section}.{key}: {value}")
+                    return False
+        # Validate list values
+        list_sections = ["paths", "processes", "registry"]
+        for section in list_sections:
+            for key, value in config[section].items():
+                if not isinstance(value, list):
+                    print(f"❌ Invalid list value in {section}.{key}: {value}")
+                    return False
+                if not value:  # Empty list
+                    print(f"⚠️  Empty list in {section}.{key}")
+        print("✅ Configuration validation passed")
+        return True
+    except Exception as e:
+        print(f"❌ Configuration validation error: {e}")
+        return False
 PF = os.path.expandvars(r"C:\Windows\Prefetch\ROBLOX*.pf")
 REGS = [r"HKCU\Software\Roblox", r"HKLM\SOFTWARE\Roblox Corporation"]
 CK = os.path.expandvars(r"%appdata%\local\Roblox\Localstorage\RobloxCookies.dat")
@@ -264,31 +358,56 @@ BAPI = "https://api.github.com/repos/centerepic/ByeBanAsync/releases/latest"
 
 def cleanfolders():
     """Remove files and directories matching the PATHS patterns."""
+    from tqdm import tqdm
+    import sys
+    # First, collect all files and directories to be processed
+    all_paths = []
     for pattern in PATHS:
         expanded = os.path.expandvars(pattern)
-        
         # First try glob pattern matching
         matches = glob.glob(expanded)
-        
         # If no matches and pattern looks like a directory path, check if it exists directly
         if not matches and not '*' in pattern and not '?' in pattern:
             if os.path.exists(expanded):
                 matches = [expanded]
-        
-        if not matches:
-            log(f"  - No matches for pattern: {pattern}")
-            continue
-            
-        for path in matches:
+        if matches:
+            all_paths.extend([(path, pattern) for path in matches])
+    if not all_paths:
+        log("  - No files or directories found to clean")
+        return
+    log(f"  📁 Found {len(all_paths)} items to clean")
+    # Process with progress bar
+    success_count = 0
+    error_count = 0
+    error_details = []
+    # Use tqdm with file=sys.stdout to avoid conflicts with logging
+    with tqdm(total=len(all_paths), desc="Cleaning files and folders", unit="item", file=sys.stdout, dynamic_ncols=True) as pbar:
+        for path, original_pattern in all_paths:
+            pbar.set_description(f"Cleaning {os.path.basename(path)}")
             try:
                 if os.path.isfile(path):
-                    os.remove(path)
-                    log(f"  ✅ Removed file: {path}")
+                    try:
+                        os.remove(path)
+                        log(f"  ✅ Removed file: {path}")
+                        success_count += 1
+                    except PermissionError as e:
+                        # Try to remove read-only attribute and delete again
+                        try:
+                            os.chmod(path, stat.S_IWRITE)
+                            os.remove(path)
+                            log(f"  ✅ Force removed file: {path}")
+                            success_count += 1
+                        except Exception as e2:
+                            error_msg = f"Failed to remove file {path}: {e2}"
+                            log(f"  ❌ {error_msg}")
+                            error_count += 1
+                            error_details.append({"path": path, "error": str(e2), "type": "file"})
                 elif os.path.isdir(path):
                     # Try multiple approaches to delete directory
                     try:
                         shutil.rmtree(path)
                         log(f"  ✅ Removed directory: {path}")
+                        success_count += 1
                     except PermissionError:
                         # Try to remove read-only attribute and delete again
                         try:
@@ -308,8 +427,12 @@ def cleanfolders():
                                         pass
                             shutil.rmtree(path, ignore_errors=True)
                             log(f"  ✅ Force removed directory: {path}")
+                            success_count += 1
                         except Exception as e2:
-                            log(f"  ❌ Failed to remove directory {path} even with force: {e2}")
+                            error_msg = f"Failed to remove directory {path} even with force: {e2}"
+                            log(f"  ❌ {error_msg}")
+                            error_count += 1
+                            error_details.append({"path": path, "error": str(e2), "type": "directory"})
                             # Last resort: try to delete contents individually
                             try:
                                 for item in os.listdir(path):
@@ -323,10 +446,36 @@ def cleanfolders():
                                         pass
                                 os.rmdir(path)
                                 log(f"  ✅ Manually cleaned directory: {path}")
+                                success_count += 1
+                                error_count -= 1  # Remove from error count since we succeeded
                             except Exception as e3:
-                                log(f"  ❌ All attempts failed for {path}: {e3}")
+                                final_error_msg = f"All attempts failed for {path}: {e3}"
+                                log(f"  ❌ {final_error_msg}")
+                                # Update the last error with more details
+                                if error_details:
+                                    error_details[-1]["final_error"] = str(e3)
+                                    error_details[-1]["attempts"] = "multiple"
             except Exception as e:
-                log(f"  ❌ Error cleaning {path}: {e}")
+                error_msg = f"Unexpected error cleaning {path}: {e}"
+                log(f"  ❌ {error_msg}")
+                error_count += 1
+                error_details.append({"path": path, "error": str(e), "type": "unknown"})
+            finally:
+                pbar.update(1)
+                # Force a flush to ensure progress bar updates properly
+                sys.stdout.flush()
+    # Summary
+    log(f"  📊 Cleaning summary: {success_count} successful, {error_count} errors")
+    if error_count > 0:
+        log("  ⚠️  Errors encountered during cleaning:")
+        for i, detail in enumerate(error_details[:5], 1):  # Show first 5 errors
+            log(f"     {i}. {detail['path']} ({detail['type']}): {detail['error']}")
+        if len(error_details) > 5:
+            log(f"     ... and {len(error_details) - 5} more errors")
+        # Raise exception if too many errors
+        if error_count > len(all_paths) * 0.5:  # More than 50% failed
+            raise FileOperationError(f"High failure rate during folder cleaning: {error_count}/{len(all_paths)} items failed", 
+                                   operation="clean_folders", details={"total_items": len(all_paths), "errors": error_details})
 
 def removecookies():
     if os.path.exists(CK):
@@ -338,7 +487,6 @@ def removecookies():
             log(f"  ❌ Error removing Roblox cookies: {e}")
     else:
         log(f"  - Cookie file not found: {CK}")
-
 BANNER = r"""
       _    _     _      _                            
      | |  (_)   | |    | |                           
@@ -347,15 +495,17 @@ BANNER = r"""
  \__ \   <| | (_| | (__| |  __/ (_| | | | |  __/ |_  
  |___/_|\_\_|\__,_|\___|_|\___|\__,_|_| |_|\___|_(_) 
  by: midinterlude.
-                                                     
-logs can be found in %temp%/robloxcleaner.log"""
+ logs can be found in %temp%/skidcleaner.log"""
 
 def title():
-    # Capture current console content before clearing
-    capture_console_history()
-    
+    """Clear screen and display title."""
+    # Don't capture console history here since it's done in main
     os.system('cls')
     print(BANNER)
+
+def clear_screen():
+    """Clear screen without showing banner."""
+    os.system('cls')
 
 def get_roblox_client_settings():
     """Fetch Roblox client settings from WEAO API and construct download URL"""
@@ -363,33 +513,25 @@ def get_roblox_client_settings():
         # Import requests after ensuring it's installed
         import requests
         import urllib3
-        
         # Disable SSL warnings since we're intentionally disabling verification for setup.roblox.com
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        
         # Get current version from WEAO API
         version_url = "https://weao.xyz/api/versions/current"
         headers = {'User-Agent': 'WEAO-3PService/1.0'}
-        
         log(f"Fetching version info from: {version_url}")
         response = requests.get(version_url, headers=headers)
         response.raise_for_status()
         version_data = response.json()
-        
         log("WEAO Version Response:")
         log(json.dumps(version_data, indent=2))
-        
         # Extract version hash
         version_hash = version_data.get("Windows", "")
         if not version_hash:
             raise Exception("No Windows version found in WEAO response")
-        
         log(f"Found Windows version: {version_hash}")
-        
         # Try to access the deployment packages directly
         # Based on the RDD source code, we need to download multiple packages
         base_hash = version_hash.replace('version-', '')
-        
         # RDD-style extraction mapping for WindowsPlayer
         extract_roots = {
             "RobloxApp.zip": "",
@@ -414,13 +556,12 @@ def get_roblox_client_settings():
             "extracontent-textures.zip": "ExtraContent/textures/",
             "extracontent-places.zip": "ExtraContent/places/"
         }
-        
         log(f"Downloading {len(extract_roots)} required packages...")
-        
+        # Import tqdm for progress bars
+        from tqdm import tqdm
         # Create target directory once
         target_dir = os.path.expandvars(r"%LOCALAPPDATA%\Roblox\Versions\\" + version_hash)
         os.makedirs(target_dir, exist_ok=True)
-        
         # Ensure temp directory exists and is clean
         temp_dir = os.path.expandvars(r"%temp%\skidcleaner")
         if os.path.exists(temp_dir):
@@ -429,85 +570,92 @@ def get_roblox_client_settings():
             except:
                 pass
         os.makedirs(temp_dir, exist_ok=True)
-        
         success_count = 0
-        for package in extract_roots.keys():
-            package_url = f"https://setup.roblox.com/version-{base_hash}-{package}"
-            log(f"Downloading {package}...")
-            
-            try:
-                # Download the package
-                headers = {'User-Agent': 'WEAO-3PService/1.0'}
-                response = requests.get(package_url, stream=True, headers=headers, verify=False)
-                response.raise_for_status()
-                
-                # Use unique filename with timestamp to avoid conflicts
-                unique_id = str(uuid.uuid4())[:8]
-                temp_file = os.path.join(temp_dir, f"{unique_id}_{package}")
-                
-                # Save to temp file first
-                with open(temp_file, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
-                
-                # Extract the package using RDD format
-                import zipfile
-                with zipfile.ZipFile(temp_file, 'r') as zip_ref:
-                    # Get the extraction root for this package
-                    extract_root = extract_roots[package]
-                    
-                    for member in zip_ref.namelist():
-                        if member.endswith('/') or member.endswith('\\'):
-                            # Skip directories
-                            continue
-                        
-                        # Convert Windows paths to Unix paths and get the relative path
-                        clean_member = member.replace('\\', '/')
-                        
-                        # Extract to the correct subdirectory based on RDD format
-                        if extract_root:
-                            target_path = os.path.join(target_dir, extract_root + clean_member)
-                        else:
-                            target_path = os.path.join(target_dir, clean_member)
-                        
-                        # Create parent directories if needed
-                        parent_dir = os.path.dirname(target_path)
-                        if parent_dir:
-                            os.makedirs(parent_dir, exist_ok=True)
-                        
-                        # Extract the file
-                        with zip_ref.open(member) as source:
-                            with open(target_path, 'wb') as target_file:
-                                target_file.write(source.read())
-                
-                # Clean up temp file - ensure it's closed and not locked
+        failed_packages = []
+        # Create progress bar for package downloads
+        import sys
+        with tqdm(total=len(extract_roots), desc="Downloading Roblox packages", unit="pkg", file=sys.stdout, dynamic_ncols=True) as pbar:
+            for package in extract_roots.keys():
+                package_url = f"https://setup.roblox.com/version-{base_hash}-{package}"
+                pbar.set_description(f"Downloading {package}")
                 try:
-                    os.remove(temp_file)
-                except:
-                    # If immediate deletion fails, try again after a short delay
-                    import time
-                    time.sleep(0.1)
+                    # Download the package
+                    headers = {'User-Agent': 'WEAO-3PService/1.0'}
+                    response = requests.get(package_url, stream=True, headers=headers, verify=False)
+                    response.raise_for_status()
+                    # Use unique filename with timestamp to avoid conflicts
+                    unique_id = str(uuid.uuid4())[:8]
+                    temp_file = os.path.join(temp_dir, f"{unique_id}_{package}")
+                    # Get total file size for progress tracking
+                    total_size = int(response.headers.get('content-length', 0))
+                    # Save to temp file first with progress bar
+                    with open(temp_file, 'wb') as f:
+                        with tqdm(total=total_size, desc=f"  {package}", unit='B', unit_scale=True, leave=False, file=sys.stdout, dynamic_ncols=True) as file_pbar:
+                            for chunk in response.iter_content(chunk_size=8192):
+                                if chunk:
+                                    f.write(chunk)
+                                    file_pbar.update(len(chunk))
+                    # Extract the package using RDD format
+                    import zipfile
+                    try:
+                        with zipfile.ZipFile(temp_file, 'r') as zip_ref:
+                            # Get the extraction root for this package
+                            extract_root = extract_roots[package]
+                            for member in zip_ref.namelist():
+                                if member.endswith('/') or member.endswith('\\'):
+                                    # Skip directories
+                                    continue
+                                # Convert Windows paths to Unix paths and get the relative path
+                                clean_member = member.replace('\\', '/')
+                                # Extract to the correct subdirectory based on RDD format
+                                if extract_root:
+                                    target_path = os.path.join(target_dir, extract_root + clean_member)
+                                else:
+                                    target_path = os.path.join(target_dir, clean_member)
+                                # Create parent directories if needed
+                                parent_dir = os.path.dirname(target_path)
+                                if parent_dir:
+                                    os.makedirs(parent_dir, exist_ok=True)
+                                # Extract the file
+                                with zip_ref.open(member) as source:
+                                    with open(target_path, 'wb') as target_file:
+                                        target_file.write(source.read())
+                        log(f"  ✅ {package} downloaded and extracted")
+                        success_count += 1
+                    except zipfile.BadZipFile as e:
+                        raise DownloadError(f"Downloaded package {package} is corrupted or not a valid zip file", 
+                                         operation="extract_package", details={"package": package, "error": str(e)})
+                    # Clean up temp file - ensure it's closed and not locked
                     try:
                         os.remove(temp_file)
                     except:
-                        pass  # Will be cleaned up when temp dir is removed
-                
-                log(f"  ✅ {package} downloaded and extracted")
-                success_count += 1
-                
-            except Exception as e:
-                log(f"  ❌ Failed to download {package}: {e}")
-        
+                        # If immediate deletion fails, try again after a short delay
+                        import time
+                        time.sleep(0.1)
+                        try:
+                            os.remove(temp_file)
+                        except:
+                            pass  # Will be cleaned up when temp dir is removed
+                except requests.RequestException as e:
+                    error_msg = f"Failed to download {package}: {e}"
+                    log(f"  ❌ {error_msg}")
+                    failed_packages.append(package)
+                    raise DownloadError(error_msg, operation="download_package", details={"package": package, "url": package_url})
+                except Exception as e:
+                    error_msg = f"Unexpected error downloading {package}: {e}"
+                    log(f"  ❌ {error_msg}")
+                    failed_packages.append(package)
+                    raise DownloadError(error_msg, operation="download_package", details={"package": package, "error": str(e)})
+                finally:
+                    pbar.update(1)
+                    title()  # Clear screen between package downloads
         log(f"✅ Successfully downloaded {success_count}/{len(extract_roots)} packages")
-        
         # Create AppSettings.xml file (required by Roblox)
         app_settings_content = """<?xml version="1.0" encoding="UTF-8"?>
 <Settings>
     <ContentFolder>content</ContentFolder>
     <BaseUrl>http://www.roblox.com</BaseUrl>
 </Settings>"""
-        
         app_settings_path = os.path.join(target_dir, "AppSettings.xml")
         try:
             with open(app_settings_path, 'w', encoding='utf-8') as f:
@@ -515,39 +663,48 @@ def get_roblox_client_settings():
             log(f"  ✅ Created AppSettings.xml")
         except Exception as e:
             log(f"  ❌ Failed to create AppSettings.xml: {e}")
-        
         if success_count < len(extract_roots):
-            log(f"⚠️  Some packages failed to download, but {success_count} succeeded")
-        
+            if failed_packages:
+                log(f"⚠️  Some packages failed to download: {', '.join(failed_packages)}")
+            else:
+                log(f"⚠️  Some packages failed to download, but {success_count} succeeded")
+        if success_count == 0:
+            raise DownloadError("No packages were successfully downloaded", operation="download_all_packages", 
+                              details={"total_packages": len(extract_roots), "failed_packages": failed_packages})
         return f"https://setup.roblox.com/version-{base_hash}"
-        
+    except DownloadError:
+        # Re-raise DownloadError as-is
+        raise
+    except requests.RequestException as e:
+        raise DownloadError(f"Network error while fetching Roblox client settings: {e}", 
+                          operation="fetch_version_info", details={"url": version_url})
     except Exception as e:
-        log(f"Error fetching WEAO client settings: {e}")
-        return None
+        raise DownloadError(f"Unexpected error in get_roblox_client_settings: {e}", 
+                          operation="get_roblox_client_settings", details={"error": str(e)})
 
 def download_and_extract_rdd(rdd_url, version_hash):
     """Download file from RDD URL and extract to Roblox Versions directory"""
+    from tqdm import tqdm
     try:
         log("\nDownloading Roblox client from RDD...")
-        
         # Import requests after ensuring it's installed
         import requests
-        
         # Create temp directory
         temp_dir = os.path.expandvars(r"%temp%\skidcleaner")
         os.makedirs(temp_dir, exist_ok=True)
-        
         # Download the file
         headers = {'User-Agent': 'WEAO-3PService/1.0'}
         # Disable SSL verification for setup.roblox.com due to certificate issues
         verify_ssl = not rdd_url.startswith('https://setup.roblox.com')
-        response = requests.get(rdd_url, stream=True, headers=headers, verify=verify_ssl)
-        response.raise_for_status()
-        
+        try:
+            response = requests.get(rdd_url, stream=True, headers=headers, verify=verify_ssl)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            raise DownloadError(f"Failed to initiate download from {rdd_url}: {e}", 
+                              operation="download_initiate", details={"url": rdd_url, "ssl_verify": verify_ssl})
         log(f"  📡 Response status: {response.status_code}")
         log(f"  📋 Content type: {response.headers.get('content-type', 'Unknown')}")
         log(f"  📏 Content length: {response.headers.get('content-length', 'Unknown')}")
-        
         # Get filename from URL or use default
         filename = "roblox_client.zip"
         if 'Content-Disposition' in response.headers:
@@ -556,45 +713,41 @@ def download_and_extract_rdd(rdd_url, version_hash):
             fname = re.findall('filename=(.+)', cd)
             if fname:
                 filename = fname[0].strip('"')
-        
         download_path = os.path.join(temp_dir, filename)
-        
+        # Get total size for progress tracking
+        total_size = int(response.headers.get('content-length', 0))
+        # Download with progress bar
         with open(download_path, 'wb') as f:
-            total_size = int(response.headers.get('content-length', 0))
-            downloaded = 0
-            for chunk in response.iter_content(chunk_size=8192):
-                if chunk:
-                    f.write(chunk)
-                    downloaded += len(chunk)
-        
+            with tqdm(total=total_size, desc="Downloading Roblox client", unit='B', unit_scale=True, file=sys.stdout, dynamic_ncols=True) as pbar:
+                downloaded = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        pbar.update(len(chunk))
         # Verify download completed successfully
         if total_size > 0 and downloaded != total_size:
-            raise Exception(f"Incomplete download: {downloaded}/{total_size} bytes")
-        
+            raise DownloadError(f"Incomplete download: {downloaded}/{total_size} bytes", 
+                              operation="download_verify", details={"expected": total_size, "actual": downloaded})
         if not os.path.exists(download_path) or os.path.getsize(download_path) == 0:
-            raise Exception("Download failed - file is empty or missing")
-        
+            raise DownloadError("Download failed - file is empty or missing", 
+                              operation="download_verify", details={"path": download_path})
         log(f"  ✅ Downloaded to: {download_path}")
-        
         # Debug: Check what we actually downloaded
         file_size = os.path.getsize(download_path)
         log(f"  📄 Downloaded file size: {file_size} bytes")
-        
         # Check first few bytes to identify file type
         with open(download_path, 'rb') as f:
             header = f.read(10)
-        
         if header.startswith(b'PK'):
             log("  📦 File appears to be a valid ZIP archive")
         elif header.startswith(b'<!DOCTYPE') or header.startswith(b'<html'):
             log("  ⚠️  RDD service returned HTML - looking for download link...")
             with open(download_path, 'r', errors='ignore') as f:
                 content = f.read()
-            
             # Look for download link in the HTML
             import re
             download_link = None
-            
             # Common patterns for download links
             patterns = [
                 r'blob:https://[^"\']+',  # Blob URLs
@@ -604,96 +757,105 @@ def download_and_extract_rdd(rdd_url, version_hash):
                 r'location\.href\s*=\s*["\']([^"\']+)["\']',
                 r'["\']([^"\']*WEAO-[^"\']*\.zip)["\']',  # WEAO specific pattern
             ]
-            
             for pattern in patterns:
                 matches = re.findall(pattern, content, re.IGNORECASE)
                 if matches:
                     download_link = matches[0]
                     log(f"  🔍 Found potential download link: {download_link}")
                     break
-            
             if download_link:
                 # Handle blob URLs (can't be accessed directly)
                 if download_link.startswith('blob:'):
                     log("  ⚠️  Found blob URL - these are temporary and can't be accessed programmatically")
                     log("  🔄 Trying alternative approach...")
-                    
                     # Try to construct a direct download URL based on the pattern
                     expected_filename = f"WEAO-LIVE-WindowsPlayer-{version_hash}.zip"
                     direct_url = f"https://rdd.weao.gg/download/{expected_filename}"
-                    
                     log(f"  📥 Attempting direct download: {direct_url}")
-                    
                     try:
                         file_response = requests.get(direct_url, stream=True)
                         file_response.raise_for_status()
-                        
                         log(f"  📋 File response content-type: {file_response.headers.get('content-type', 'Unknown')}")
-                        
-                        # Save the actual file
+                        # Save the actual file with progress bar
+                        file_total_size = int(file_response.headers.get('content-length', 0))
                         with open(download_path, 'wb') as f:
-                            for chunk in file_response.iter_content(chunk_size=8192):
-                                if chunk:
-                                    f.write(chunk)
-                        
+                            with tqdm(total=file_total_size, desc="  Downloading actual file", unit='B', unit_scale=True, leave=False, file=sys.stdout, dynamic_ncols=True) as file_pbar:
+                                for chunk in file_response.iter_content(chunk_size=8192):
+                                    if chunk:
+                                        f.write(chunk)
+                                        file_pbar.update(len(chunk))
                         log(f"  ✅ Downloaded actual file to: {download_path}")
-                    except Exception as e:
-                        log(f"  ❌ Direct download failed: {e}")
-                        raise Exception("Blob URLs cannot be accessed programmatically and direct download failed")
+                    except requests.RequestException as e:
+                        raise DownloadError(f"Direct download failed: {e}", 
+                                          operation="direct_download", details={"url": direct_url})
                 else:
                     # Make the link absolute if it's relative
                     if download_link.startswith('/'):
                         download_link = f"https://rdd.weao.gg{download_link}"
                     elif not download_link.startswith('http'):
                         download_link = f"https://rdd.weao.gg/{download_link}"
-                    
                     log(f"  📥 Attempting to download from: {download_link}")
-                    
                     # Download the actual file
-                    file_response = requests.get(download_link, stream=True)
-                    file_response.raise_for_status()
-                    
-                    log(f"  📋 File response content-type: {file_response.headers.get('content-type', 'Unknown')}")
-                    
-                    # Save the actual file
-                    with open(download_path, 'wb') as f:
-                        for chunk in file_response.iter_content(chunk_size=8192):
-                            if chunk:
-                                f.write(chunk)
-                    
-                    log(f"  ✅ Downloaded actual file to: {download_path}")
+                    try:
+                        file_response = requests.get(download_link, stream=True)
+                        file_response.raise_for_status()
+                        log(f"  📋 File response content-type: {file_response.headers.get('content-type', 'Unknown')}")
+                        # Save the actual file with progress bar
+                        file_total_size = int(file_response.headers.get('content-length', 0))
+                        with open(download_path, 'wb') as f:
+                            with tqdm(total=file_total_size, desc="  Downloading actual file", unit='B', unit_scale=True, leave=False, file=sys.stdout, dynamic_ncols=True) as file_pbar:
+                                for chunk in file_response.iter_content(chunk_size=8192):
+                                    if chunk:
+                                        f.write(chunk)
+                                        file_pbar.update(len(chunk))
+                        log(f"  ✅ Downloaded actual file to: {download_path}")
+                    except requests.RequestException as e:
+                        raise DownloadError(f"Failed to download from found link: {e}", 
+                                          operation="link_download", details={"url": download_link})
             else:
                 log("  ❌ No download link found in HTML response")
                 log(f"  📄 HTML content preview: {content[:500]}...")
-                raise Exception("RDD service returned HTML page instead of file, and no download link found")
+                raise DownloadError("RDD service returned HTML page instead of file, and no download link found", 
+                                  operation="parse_html", details={"content_preview": content[:500]})
         else:
             log(f"  ❓ Unknown file type. Header: {header}")
-        
+            raise DownloadError(f"Unknown file type downloaded: {header}", 
+                              operation="file_type_check", details={"header": header.hex()})
         # Create target directory and extract the file
         target_dir = os.path.expandvars(r"%LOCALAPPDATA%\Roblox\Versions\\" + version_hash)
         os.makedirs(target_dir, exist_ok=True)
-        
         import zipfile
         try:
             # Test if zip file is valid before extraction
             with zipfile.ZipFile(download_path, 'r') as zip_ref:
                 zip_ref.testzip()  # This will raise BadZipFile if corrupted
-                zip_ref.extractall(target_dir)
-        except zipfile.BadZipFile:
-            raise Exception("Downloaded file is corrupted or not a valid zip file")
+                # Count files for progress tracking
+                file_count = len(zip_ref.namelist())
+                log(f"  📦 Extracting {file_count} files...")
+                # Extract with progress bar
+                with tqdm(total=file_count, desc="Extracting files", unit="file", file=sys.stdout, dynamic_ncols=True) as extract_pbar:
+                    for member in zip_ref.namelist():
+                        if not member.endswith('/') and not member.endswith('\\'):  # Skip directories
+                            zip_ref.extract(member, target_dir)
+                        extract_pbar.update(1)
+        except zipfile.BadZipFile as e:
+            raise DownloadError(f"Downloaded file is corrupted or not a valid zip file: {e}", 
+                              operation="extract_zip", details={"path": download_path})
         except Exception as e:
-            raise Exception(f"Failed to extract zip file: {e}")
-        
+            raise DownloadError(f"Failed to extract zip file: {e}", 
+                              operation="extract_zip", details={"path": download_path, "error": str(e)})
         log(f"  ✅ Extracted to: {target_dir}")
-        
         # Clean up downloaded file
         try:
             os.remove(download_path)
         except Exception:
             pass
-        
+    except DownloadError:
+        # Re-raise DownloadError as-is
+        raise
     except Exception as e:
-        log(f"  ❌ Error downloading/extracting RDD file: {e}")
+        raise DownloadError(f"Unexpected error in download_and_extract_rdd: {e}", 
+                          operation="download_and_extract_rdd", details={"url": rdd_url, "error": str(e)})
 
 def byebanasync(wait=True):
     """Python implementation of ByeBanAsync functionality."""
@@ -701,30 +863,25 @@ def byebanasync(wait=True):
         log("\n" + "="*41)
         log("ByeBanAsync v2.2 | credits to: centerepic")
         log("="*41)
-        log("[!] Ensure you are logged out of the banned account before running this program!")
-        
         # Get user profile and cookie path
         user_profile = os.environ.get('USERPROFILE')
         if not user_profile:
             log("[!!!] Could not get USERPROFILE environment variable.")
             return
-        
         cookie_path = os.path.join(user_profile, "AppData", "Local", "Roblox", "LocalStorage", "RobloxCookies.dat")
-        
         # Delete Roblox cookie file
         if not os.path.exists(cookie_path):
-            log(f"[!!!] Roblox cookie file not found at {cookie_path}!")
+            # Cookie file doesn't exist, that's fine
+            pass
         else:
             try:
                 os.remove(cookie_path)
                 log("[√] Roblox cookie file has been deleted!")
             except Exception as e:
                 log(f"[!!!] Failed to delete Roblox cookie file! Err: {e}")
-        
         # MAC address spoofing
         log("\n--- MAC Address Spoofing ---")
         change_mac = input("[?] Do you want to attempt to change your MAC address? (y/n): ").strip().lower()
-        
         if change_mac == 'y':
             adapters = list_network_adapters()
             if not adapters:
@@ -734,7 +891,6 @@ def byebanasync(wait=True):
                 for i, adapter in enumerate(adapters, 1):
                     log(f"  [{i}] {adapter['description']}")
                     log(f"     └─ Connection Name: '{adapter['connection_name']}'")
-                
                 # Select adapter
                 while True:
                     try:
@@ -746,16 +902,13 @@ def byebanasync(wait=True):
                             log("[!] Invalid selection. Please enter a number from the list.")
                     except ValueError:
                         log("[!] Invalid selection. Please enter a number from the list.")
-                
                 # Generate random MAC address
                 random_mac = generate_random_mac_address()
                 log(f"[>] Attempting to set MAC for adapter: '{selected_adapter['description']}' (ID: {selected_adapter['id']})...")
-                
                 try:
                     change_mac_address(selected_adapter['id'], random_mac)
                     log("[√] Successfully updated registry for MAC address.")
                     log(f"[>] Attempting to restart network adapter '{selected_adapter['connection_name']}' to apply changes...")
-                    
                     try:
                         restart_network_adapter(selected_adapter['connection_name'])
                         log(f"[√] Network adapter '{selected_adapter['connection_name']}' restarted. MAC address change should now be active.")
@@ -766,9 +919,7 @@ def byebanasync(wait=True):
                     log(f"[!!!] Error changing MAC address in registry: {e}")
         else:
             log("[i] Skipping MAC address change.")
-        
         log("\n[...] ByeBanAsync completed!")
-        
     except Exception as e:
         log(f"[!!!] Error in ByeBanAsync: {e}")
 
@@ -783,10 +934,8 @@ def list_network_adapters():
     try:
         import winreg
         adapters = []
-        
         with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 
                            r"SYSTEM\CurrentControlSet\Control\Class\{4d36e972-e325-11ce-bfc1-08002be10318}") as class_key:
-            
             for i in range(10000):  # Reasonable limit
                 try:
                     subkey_name = f"{i:04d}"
@@ -794,7 +943,6 @@ def list_network_adapters():
                         try:
                             driver_desc = winreg.QueryValueEx(adapter_key, "DriverDesc")[0]
                             net_cfg_instance_id = winreg.QueryValueEx(adapter_key, "NetCfgInstanceID")[0]
-                            
                             # Get connection name
                             try:
                                 connection_path = f"SYSTEM\\CurrentControlSet\\Control\\Network\\{{4D36E972-E325-11CE-BFC1-08002BE10318}}\\{net_cfg_instance_id}\\Connection"
@@ -802,7 +950,6 @@ def list_network_adapters():
                                     connection_name = winreg.QueryValueEx(conn_key, "Name")[0]
                             except:
                                 connection_name = driver_desc
-                            
                             # Filter out virtual/loopback adapters
                             desc_lower = driver_desc.lower()
                             if not any(keyword in desc_lower for keyword in 
@@ -816,7 +963,6 @@ def list_network_adapters():
                             continue
                 except FileNotFoundError:
                     break
-        
         return adapters
     except ImportError:
         log("[!!!] winreg module not available. Cannot list network adapters.")
@@ -829,13 +975,10 @@ def change_mac_address(adapter_id, mac_address):
     """Change MAC address in Windows registry."""
     try:
         import winreg
-        
         path = f"SYSTEM\\CurrentControlSet\\Control\\Class\\{{4d36e972-e325-11ce-bfc1-08002be10318}}\\{adapter_id}"
-        
         with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, path, 0, winreg.KEY_WRITE) as adapter_key:
             log(f"[>] Setting 'NetworkAddress' to '{mac_address}'")
             winreg.SetValueEx(adapter_key, "NetworkAddress", 0, winreg.REG_SZ, mac_address)
-    
     except ImportError:
         raise Exception("winreg module not available")
     except Exception as e:
@@ -844,25 +987,20 @@ def change_mac_address(adapter_id, mac_address):
 def restart_network_adapter(connection_name):
     """Restart network adapter using netsh."""
     import time
-    
     log(f"[>] Disabling adapter: '{connection_name}'")
     disable_result = subprocess.run([
         "netsh", "interface", "set", "interface", 
         f"name={connection_name}", "admin=disable"
     ], capture_output=True, text=True)
-    
     if disable_result.returncode != 0:
         error_msg = disable_result.stderr.strip()
         raise Exception(f"Failed to disable network adapter. Netsh output: {error_msg}")
-    
     time.sleep(2)
-    
     log(f"[>] Enabling adapter: '{connection_name}'")
     enable_result = subprocess.run([
         "netsh", "interface", "set", "interface", 
         f"name={connection_name}", "admin=enable"
     ], capture_output=True, text=True)
-    
     if enable_result.returncode != 0:
         error_msg = enable_result.stderr.strip()
         raise Exception(f"Failed to enable network adapter. Netsh output: {error_msg}")
@@ -872,27 +1010,21 @@ def byebanasync_original(wait=True):
     try:
         log("\nDownloading ByeBanAsync...")
         temp_dir = os.path.expandvars(r"%temp%\ByeBanAsync")
-        
         os.makedirs(temp_dir, exist_ok=True)
-        
         url = BAPI
-        
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read())
-        
         download_url = None
         for asset in data.get('assets', []):
             if asset['name'].endswith('.exe'):
                 download_url = asset['browser_download_url']
                 break
-        
         if download_url:
             exe_path = os.path.join(temp_dir, "ByeBanAsync.exe")
             log(f"  ✅ Found executable, downloading...")
             urllib.request.urlretrieve(download_url, exe_path)
             log(f"  ✅ Downloaded to {exe_path}")
-            
             log("  ✅ Launching ByeBanAsync...")
             if wait:
                 cmd_line = f'start "" /wait "{exe_path}"'
@@ -908,26 +1040,21 @@ def run_command(cmd, capture_output=True, shell=False):
     """Run a command and log it with full output."""
     cmd_str = ' '.join(cmd) if isinstance(cmd, list) else cmd
     log(f"  🔧 Running command: {cmd_str}")
-    
     try:
         if capture_output:
             result = subprocess.run(cmd, capture_output=True, text=True, shell=shell)
-            
             # Log stdout if there's any output
             if result.stdout and result.stdout.strip():
                 log(f"  📤 STDOUT: {result.stdout.strip()}")
-            
             # Log stderr if there's any output
             if result.stderr and result.stderr.strip():
                 log(f"  📥 STDERR: {result.stderr.strip()}")
         else:
             result = subprocess.run(cmd, shell=shell)
-        
         if result.returncode == 0:
             log(f"  ✅ Command completed successfully (exit code: {result.returncode})")
         else:
             log(f"  ⚠️  Command exited with code: {result.returncode}")
-        
         return result
     except Exception as e:
         log(f"  ❌ Error running command: {e}")
@@ -948,231 +1075,299 @@ def launch_roblox():
         if not os.path.exists(roblox_versions_dir):
             log("  ❌ Roblox Versions directory not found")
             return False
-        
         # Get the most recent version directory
         version_dirs = [d for d in os.listdir(roblox_versions_dir) 
                       if os.path.isdir(os.path.join(roblox_versions_dir, d)) 
                       and d.startswith("version-")]
-        
         if not version_dirs:
             log("  ❌ No Roblox version directories found")
             return False
-        
         # Sort to get the latest version (assuming version names are sortable)
         latest_version = sorted(version_dirs)[-1]
         roblox_exe_path = os.path.join(roblox_versions_dir, latest_version, "RobloxPlayerBeta.exe")
-        
         if not os.path.exists(roblox_exe_path):
             log(f"  ❌ RobloxPlayerBeta.exe not found in {latest_version}")
             return False
-        
         log(f"  🚀 Launching Roblox from: {roblox_exe_path}")
         subprocess.Popen([roblox_exe_path])
         log("  ✅ Roblox launched successfully!")
         return True
-        
     except Exception as e:
         log(f"  ❌ Error launching Roblox: {e}")
         return False
 
+
 def main():
+    """Main execution function - optimized for web GUI configuration."""
+    # Start status server for web GUI integration
+    try:
+        status_port = start_status_server()
+    except Exception as e:
+        print(f"Could not start status server: {e}")
+        status_port = None
+    
     # Load configuration
     config = load_config()
     
-    # Ask user what mode they want
+    # Validate configuration
+    if not validate_config(config):
+        print("Invalid configuration. Using default settings.")
+        config = get_default_config()
+    
+    # Display banner
     print("\n" + "="*53)
     print(BANNER)
     print("="*53)
-    print("\n1. Standard Run (recommended)")
-    print("2. Advanced Run (edit configuration)")
-    print("3. Exit")
-    
-    mode_choice = input("\nSelect mode (1-3): ").strip()
-    
-    if mode_choice == "3":
-        print("Exiting...")
-        return
-    elif mode_choice == "2":
-        result = edit_config_interactive(config)
-        if result is True:
-            # User chose to save and run
-            print("\nStarting cleaning with new settings...")
-        elif result is False:
-            # User chose to save and exit without running
-            print("\nConfiguration saved. Exiting...")
-            return
-        elif result is None:
-            # User chose to exit without saving
-            print("\nExiting without saving...")
-            return
-        else:
-            # Fallback - just run with current settings
-            print("\nStarting cleaning with current settings...")
-    elif mode_choice == "1":
-        print("\nStarting standard cleaning...")
-    else:
-        print("Invalid choice. Exiting...")
-        return
-    
-    # Clear screen after mode selection to avoid duplicate display
-    os.system('cls')
     
     # Update global variables based on config
     global LOG, OPEN_LOG, LP, PROCS, PATHS, REGS
-    
     LOG = config["general"]["log_enabled"]
     OPEN_LOG = config["general"]["open_log_on_exit"]
     PROCS = config["processes"]["roblox_processes"]
     PATHS = config["paths"]["temp_folders"] + config["paths"]["roblox_folders"]
     REGS = config["registry"]["registry_paths"]
     
-    try:
-        open(LP, 'w').close()
-    except Exception:
-        pass
+    # Initialize logging (quiet startup)
+    if LOG:
+        try:
+            with open(LP, 'w') as f:
+                f.write("=== skidcleaner Log ===\n")
+                f.write("If you experience any errors, please DM 'midinterlude' on Discord.\n")
+                f.write(f"Configuration loaded from cleaner_config.json\n")
+                f.write(f"Profile: {config.get('profile', 'custom')}\n")
+        except Exception:
+            pass
     
-    # Capture existing console content before starting
-    if config["general"]["capture_console_history"]:
-        capture_console_history()
-    
-    log(f"Logging to: {LP}")
-    log(BANNER)
-    log("=== Roblox Cleaner Log ===")
-    log("If you experience any errors, please DM 'midinterlude' on Discord.")
-
-    if not config["advanced"]["skip_confirmation_prompts"]:
-        proceed = input("\nThis script will clean Roblox-related temporary files and may restart your computer. Continue? (y/n): ")
-        if proceed.lower().strip() != 'y':
+    # Get user confirmation with info option
+    while True:
+        proceed = input("\nThis script will clean every file linked to roblox and may restart your computer.\nFor additional information type \"info\". (y/n/info): ").strip().lower()
+        if proceed == 'info':
+            print("\n" + "="*60)
+            print("ROBLOX CLEANER - CONFIGURATION SUMMARY")
+            print("="*60)
+            print(f"Web GUI integration: {f'http://localhost:{status_port}' if status_port else 'Not available'}")
+            print(f"Configuration file: cleaner_config.json")
+            print(f"Profile: {config.get('profile', 'custom')}")
+            print(f"Log file: {LP}")
+            print("\nCleaning Operations:")
+            print(f"  • Process Termination: {'Enabled' if config.get('cleaning', {}).get('kill_processes', False) else 'Disabled'}")
+            print(f"  • Folder Cleaning: {'Enabled' if config.get('cleaning', {}).get('clean_folders', False) else 'Disabled'}")
+            print(f"  • Cookie Removal: {'Enabled' if config.get('cleaning', {}).get('remove_cookies', False) else 'Disabled'}")
+            print(f"  • DNS Cache Flush: {'Enabled' if config.get('cleaning', {}).get('flush_dns', False) else 'Disabled'}")
+            print(f"  • Registry Cleanup: {'Enabled' if config.get('cleaning', {}).get('clean_registry', False) else 'Disabled'}")
+            print(f"  • Prefetch Cleanup: {'Enabled' if config.get('cleaning', {}).get('clean_prefetch', False) else 'Disabled'}")
+            print(f"  • Explorer Restart: {'Enabled' if config.get('cleaning', {}).get('restart_explorer', False) else 'Disabled'}")
+            print(f"\nRoblox Operations:")
+            print(f"  • Download Roblox: {'Enabled' if config.get('roblox', {}).get('download_roblox', False) else 'Disabled'}")
+            print(f"  • Launch Roblox: {'Enabled' if config.get('roblox', {}).get('launch_roblox_on_exit', False) else 'Disabled'}")
+            print(f"  • Create AppSettings: {'Enabled' if config.get('roblox', {}).get('create_appsettings', False) else 'Disabled'}")
+            print(f"\nAdvanced Options:")
+            print(f"  • Auto Restart: {'Enabled' if config.get('advanced', {}).get('auto_restart_after_cleaning', False) else 'Disabled'}")
+            print(f"  • Skip Prompts: {'Enabled' if config.get('advanced', {}).get('skip_confirmation_prompts', False) else 'Disabled'}")
+            print(f"  • Force Deletion: {'Enabled' if config.get('advanced', {}).get('force_file_deletion', False) else 'Disabled'}")
+            print("="*60)
+            continue
+        elif proceed in ['y', 'yes']:
+            break
+        elif proceed in ['n', 'no']:
             print("Aborting.")
             return
-
+        else:
+            print("Invalid option. Please enter 'y', 'n', or 'info'.")
+            continue
     errors = []
+    operation_start_time = {}
 
-    if config["cleaning"]["kill_processes"]:
-        log("Cleaning up Roblox processes...")
-        for process in PROCS:
-            result = run_command(["taskkill","/f","/im", process])
-            if result and result.returncode == 0:
-                log(f"  ✅ Terminated: {process}")
+    def log_operation_start(operation_name):
+        """Log the start of an operation with timestamp."""
+        import time
+        operation_start_time[operation_name] = time.time()
+        log(f"🚀 Starting {operation_name}...")
+
+    def log_operation_end(operation_name, success=True, error_msg=None):
+        """Log the end of an operation with duration."""
+        import time
+        if operation_name in operation_start_time:
+            duration = time.time() - operation_start_time[operation_name]
+            if success:
+                log(f"✅ {operation_name} completed successfully in {duration:.2f}s")
             else:
-                log(f"  - {process} not running or already terminated")
-    
-    if config["cleaning"]["clean_folders"]:
-        log("\nCleaning up Roblox files...")
-        cleanfolders()
-    
-    if config["cleaning"]["remove_cookies"]:
-        log("\nRemoving Tainted Roblox Cookies...")
-        removecookies()
-    
-    if config["cleaning"]["flush_dns"]:
-        log("\nFlushing DNS cache...")
-        result = run_command(["ipconfig","/flushdns"])
-        if result and result.returncode == 0:
-            log("  ✅ DNS cache flushed")
-        else:
-            log("  ❌ Error flushing DNS cache")
-            errors.append("DNS flush failed")
-    
-    if config["general"]["clear_screen_on_sections"]:
-        title()
-    
-    if config["cleaning"]["restart_explorer"]:
-        log("\nRestarting Explorer...")
-        run_command(["taskkill","/f","/im","explorer.exe"])
-        log("  ✅ Explorer terminated")
-        run_command(["explorer.exe"])
-        log("  ✅ Explorer restarted")
-        title()
-    
-    if config["cleaning"]["clean_registry"]:
-        log("\nWiping Registry entries...")
-        for path in REGS:
-            result = run_command(["reg", "delete", path, "/f"])
+                log(f"❌ {operation_name} failed after {duration:.2f}s: {error_msg}")
+    try:
+        if config["cleaning"]["kill_processes"]:
+            log_operation_start("Process termination")
+            for process in PROCS:
+                result = run_command(["taskkill","/f","/im", process])
+                if result and result.returncode == 0:
+                    log(f"  ✅ Terminated: {process}")
+                else:
+                    log(f"  - {process} not running or already terminated")
+            log_operation_end("Process termination")
+        if config["cleaning"]["clean_folders"]:
+            log_operation_start("Folder cleaning")
+            try:
+                cleanfolders()
+                log_operation_end("Folder cleaning")
+            except FileOperationError as e:
+                log_operation_end("Folder cleaning", False, str(e))
+                errors.append(f"Folder cleaning failed: {e}")
+                log(f"🔍 Detailed error info: {e.details}")
+        if config["cleaning"]["remove_cookies"]:
+            log_operation_start("Cookie removal")
+            try:
+                removecookies()
+                log_operation_end("Cookie removal")
+            except FileOperationError as e:
+                log_operation_end("Cookie removal", False, str(e))
+                errors.append(f"Cookie removal failed: {e}")
+        if config["cleaning"]["flush_dns"]:
+            log_operation_start("DNS cache flush")
+            result = run_command(["ipconfig","/flushdns"])
             if result and result.returncode == 0:
-                log(f"  ✅ Deleted registry: {path}")
+                log_operation_end("DNS cache flush")
             else:
-                log(f"  - Registry path not found or already deleted: {path}")
-        title()
-    
-    if config["cleaning"]["clean_prefetch"]:
-        log("\nRemoving Windows Prefetch files...")
-        prefetch_files = glob.glob(PF)
-        if prefetch_files:
-            for file in prefetch_files:
-                try:
-                    os.remove(file)
-                    log(f"  ✅ Removed prefetch: {os.path.basename(file)}")
-                except Exception as e:
-                    log(f"  ❌ Error removing prefetch file {file}: {e}")
-                    errors.append(f"prefetch {file} deletion failed: {e}")
+                log_operation_end("DNS cache flush", False, "Command failed")
+                log("  ❌ Error flushing DNS cache")
+                errors.append("DNS flush failed")
+        if config["general"]["clear_screen_on_sections"]:
+            title()
+        if config["cleaning"]["restart_explorer"]:
+            log_operation_start("Explorer restart")
+            try:
+                run_command(["taskkill","/f","/im","explorer.exe"])
+                log("  ✅ Explorer terminated")
+                run_command(["explorer.exe"])
+                log("  ✅ Explorer restarted")
+                log_operation_end("Explorer restart")
+                title()
+            except ProcessError as e:
+                log_operation_end("Explorer restart", False, str(e))
+                errors.append(f"Explorer restart failed: {e}")
+        if config["cleaning"]["clean_registry"]:
+            log_operation_start("Registry cleanup")
+            registry_errors = []
+            for path in REGS:
+                result = run_command(["reg", "delete", path, "/f"])
+                if result and result.returncode == 0:
+                    log(f"  ✅ Deleted registry: {path}")
+                else:
+                    log(f"  - Registry path not found or already deleted: {path}")
+                    registry_errors.append(path)
+            if registry_errors:
+                log_operation_end("Registry cleanup", False, f"Some registry paths not found: {registry_errors}")
+            else:
+                log_operation_end("Registry cleanup")
+            title()
+        if config["cleaning"]["clean_prefetch"]:
+            log_operation_start("Prefetch cleanup")
+            prefetch_files = glob.glob(PF)
+            if prefetch_files:
+                prefetch_errors = []
+                for file in prefetch_files:
+                    try:
+                        os.remove(file)
+                        log(f"  ✅ Removed prefetch: {os.path.basename(file)}")
+                    except Exception as e:
+                        error_msg = f"Error removing prefetch file {file}: {e}"
+                        log(f"  ❌ {error_msg}")
+                        prefetch_errors.append({"file": file, "error": str(e)})
+                        errors.append(f"prefetch {file} deletion failed: {e}")
+                if prefetch_errors:
+                    log_operation_end("Prefetch cleanup", False, f"{len(prefetch_errors)} files failed")
+                else:
+                    log_operation_end("Prefetch cleanup")
+            else:
+                log("  - No Roblox prefetch files found")
+                log_operation_end("Prefetch cleanup")
+            title()
+        if config["roblox"]["download_roblox"]:
+            log_operation_start("Roblox client download")
+            try:
+                rdd_url = get_roblox_client_settings()
+                log_operation_end("Roblox client download")
+            except DownloadError as e:
+                log_operation_end("Roblox client download", False, str(e))
+                errors.append(f"Roblox download failed: {e}")
+                log(f"🔍 Detailed download error info: {e.details}")
+            except Exception as e:
+                log_operation_end("Roblox client download", False, str(e))
+                errors.append(f"Roblox download failed with unexpected error: {e}")
+        log("\n🎉 Cleaning complete!")
+        if config["tools"]["run_byebanasync"]:
+            log_operation_start("ByeBanAsync")
+            try:
+                log("\nLaunching ByeBanAsync in its own window; please wait for it to close...")
+                byebanasync(wait=True)
+                log_operation_end("ByeBanAsync")
+            except (NetworkError, ProcessError) as e:
+                log_operation_end("ByeBanAsync", False, str(e))
+                errors.append(f"ByeBanAsync failed: {e}")
+                log(f"🔍 Detailed ByeBanAsync error info: {e.details}")
+        if errors:
+            log("\n⚠️  Some operations reported issues:")
+            for i, e in enumerate(errors, 1):
+                log(f"   {i}. {e}")
+        # Handle exit based on configuration
+        if config["advanced"]["auto_restart_after_cleaning"]:
+            if OPEN_LOG and LOG:
+                log_thread = threading.Thread(target=open_log_async, daemon=True)
+                log_thread.start()
+            run_command("shutdown /r /t 0", capture_output=False, shell=True)
         else:
-            log("  - No Roblox prefetch files found")
-        title()
-    
-    if config["roblox"]["download_roblox"]:
-        log("\nFetching Roblox client settings...")
-        rdd_url = get_roblox_client_settings()
-    
-    log("\nCleaning complete!")
-    
-    if config["tools"]["run_byebanasync"]:
-        log("\nLaunching ByeBanAsync in its own window; please wait for it to close...")
-        byebanasync(wait=True)
-    
-    if errors:
-        log("\nNote: some operations reported issues:")
-        for e in errors:
-            log(f"   - {e}")
-    
-    # Handle exit based on configuration
-    if config["advanced"]["auto_restart_after_cleaning"]:
-        if OPEN_LOG and LOG:
-            log_thread = threading.Thread(target=open_log_async, daemon=True)
-            log_thread.start()
-        run_command("shutdown /r /t 0", capture_output=False, shell=True)
-    else:
-        if config["roblox"]["launch_roblox_on_exit"]:
-            if not config["advanced"]["skip_confirmation_prompts"]:
-                launch_choice = input("\nDo you want to launch Roblox now? (y/n): ")
-                if launch_choice.lower().strip() == 'y':
+            if config["roblox"]["launch_roblox_on_exit"]:
+                if not config["advanced"]["skip_confirmation_prompts"]:
+                    launch_choice = input("\nDo you want to launch Roblox now? (y/n): ")
+                    if launch_choice.lower().strip() == 'y':
+                        title()
+                        log_operation_start("Roblox launch")
+                        if launch_roblox():
+                            log_operation_end("Roblox launch")
+                            log("✅ Roblox is starting up!")
+                        else:
+                            log_operation_end("Roblox launch", False, "Launch failed")
+                            log("❌ Failed to launch Roblox automatically")
+                            log("   You can launch it manually from the Roblox Player shortcut")
+                else:
                     title()
-                    log("\nLaunching Roblox...")
+                    log_operation_start("Roblox launch")
                     if launch_roblox():
+                        log_operation_end("Roblox launch")
                         log("✅ Roblox is starting up!")
                     else:
+                        log_operation_end("Roblox launch", False, "Launch failed")
                         log("❌ Failed to launch Roblox automatically")
-                        log("   You can launch it manually from the Roblox Player shortcut")
-            else:
-                title()
-                log("\nLaunching Roblox...")
-                if launch_roblox():
-                    log("✅ Roblox is starting up!")
-                else:
-                    log("❌ Failed to launch Roblox automatically")
-        
-        log("\nExiting without restarting. (You may want to restart manually to ensure all changes take effect.)")
-        print("Thank you for using Roblox Cleaner! If you had any issues, please DM 'midinterlude' on Discord with the log file.")
-        
-        # Ensure log is written before opening notepad
-        if LOG:
-            try:
-                with open(LP, 'a', encoding='utf-8') as f:
-                    f.flush()
-            except:
-                pass
-        
-        if not config["advanced"]["skip_confirmation_prompts"]:
-            input("Press Enter to exit.")
-        
-        if OPEN_LOG and LOG:
-            log_thread = threading.Thread(target=open_log_async, daemon=True)
-            log_thread.start()
-        
-        # Force exit immediately
-        os._exit(0)
-
-
+            log("\nExiting without restarting. (You may want to restart manually to ensure all changes take effect.)")
+            print("Thank you for using skidcleaner! If you had any issues, please DM 'midinterlude' on Discord with the log file.")
+            # Ensure log is written before opening notepad
+            if LOG:
+                try:
+                    with open(LP, 'a', encoding='utf-8') as f:
+                        f.flush()
+                except:
+                    pass
+            if not config["advanced"]["skip_confirmation_prompts"]:
+                input("Press Enter to exit.")
+            if OPEN_LOG and LOG:
+                log_thread = threading.Thread(target=open_log_async, daemon=True)
+                log_thread.start()
+            # Force exit immediately
+            os._exit(0)
+    except KeyboardInterrupt:
+        log("\n⚠️  Operation cancelled by user")
+        print("\nOperation cancelled by user.")
+    except RobloxCleanerError as e:
+        log(f"\n❌ skidcleaner error in {e.operation}: {e}")
+        log(f"🔍 Error details: {e.details}")
+        print(f"\n❌ Error in {e.operation}: {e}")
+        if config["general"]["log_enabled"]:
+            print(f"📋 Check log file for details: {LP}")
+    except Exception as e:
+        log(f"\n💥 Unexpected error: {e}")
+        import traceback
+        log(f"🔍 Full traceback: {traceback.format_exc()}")
+        print(f"\n💥 Unexpected error: {e}")
+        if config["general"]["log_enabled"]:
+            print(f"📋 Check log file for details: {LP}")
 if __name__ == '__main__':
     if not pyuac.isUserAdmin():
         pyuac.runAsAdmin()
