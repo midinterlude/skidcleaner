@@ -13,37 +13,30 @@ https://github.com/midinterlude/skidcleaner./releases/tag/skidcleaner
 - THIS SHIT IS VIBE CODED AS FUCK.
 - Half this shit is AI
 - Don't come after me with a torch and a pitchfork if some shit is fucked
-- anyways imma let chatgpt describe it
+- You can control anything this app does... but i really dont recommend it
 
 
 ## Features
 
 ### 🧹 **Comprehensive Cleaning**
-- Kill Roblox processes safely
-- Clean temporary files and folders
-- Remove Roblox cookies
-- Flush DNS cache
-- Clean Windows registry entries
-- Remove prefetch files
+- Kills Roblox processes safely
+- Cleans temporary files and folders
+- Removes Roblox cookies
+- Flushes DNS cache
+- Cleans Windows registry entries
+- Removes prefetch files
 - Optional Explorer restart
 
-### 🎮 **Roblox Management**
-- Download fresh Roblox client from WEAO API
-- Install with RDD (Roblox Deployment Downloader) format
-- Create required AppSettings.xml
-- Launch Roblox after cleaning
-
 ### 🛡️ **Advanced Ban Evasion**
-- **Overkill**: Maximum privacy and security for users who want zero compromises
 - MAC address spoofing capability
 - Complete cookie deletion
 - Network adapter management
 - Registry cleanup
+- Completely reinstalls roblox and removes any files or registeries linked to it
 
 ### ⚙️ **Advanced Configuration**
-- JSON-based configuration system
+- You are in control of everything it does
 - Interactive configuration editor
-- Skip confirmation prompts option
 - Customizable paths and processes
 - Toggle individual cleaning operations
 
@@ -72,23 +65,19 @@ press win+r and type cmd
 ```bash
 python cleaner.py
 ```
+select standard run
+select yes or no depending on what you want it to do
+wait for it to finish
+restart pc (if it doesn't automatically)
 
-## Overkill - Zero Compromise Approach
+### Executable file
 
-This script is VERY **overkill** designed for users who want absolutely no traces or compromises on their Roblox accounts. This is perfect for:
-
-- **Privacy-conscious users** who want zero data retention
-- **Security-focused users** who want maximum protection
-- **Alt account users** who need complete isolation
-- **Users avoiding detection** who want no digital footprints
-
-### Overkill Features:
-- **Complete cookie deletion** (including all Roblox data files)
-- **MAC address spoofing** to change network identity
-- **Registry cleanup** to remove all Roblox traces
-- **Prefetch deletion** to prevent Windows from caching Roblox data
-- **Process termination** for all Roblox-related applications
-- **DNS cache flushing** to clear network resolution history
+install the executable
+run file
+select standard run
+select yes or no depending on what you want it to do
+wait for it to finish
+restart pc (if it doesn't automatically)
 
 ## Configuration
 
@@ -180,9 +169,7 @@ pythonprojects/
 - `winreg` - Windows registry access (built-in)
 
 ### System Requirements
-- Windows 10/11
-- Administrator privileges
-- Internet connection (for Roblox download)
+- a pc.
 
 ## Safety Features
 
@@ -220,6 +207,7 @@ pythonprojects/
 **Original Author**: midinterlude  
 **ByeBanAsync**: centerepic
 **Enhanced by**: Advanced configuration and Python integration
+**Mainly actually coded by**: AI... shout out SWE-1.5 fast
 
 ## Support
 
