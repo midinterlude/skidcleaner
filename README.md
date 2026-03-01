@@ -64,6 +64,8 @@ https://github.com/midinterlude/skidcleaner./releases/tag/skidcleaner
 
 ## Usage
 
+MAKE SURE TO CLEAR YOUR COOKIES AND CASHED DATA BEFORE RUNNING APPLICATION! ⚠️⚠️⚠️
+
 ### Standard Usage (Python file)
 
 press win+r and type cmd
