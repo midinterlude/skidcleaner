@@ -1,0 +1,55 @@
+{
+    "general": {
+        "log_enabled": true,
+        "open_log_on_exit": true,
+        "capture_console_history": true,
+        "clear_screen_on_sections": true
+    },
+    "cleaning": {
+        "kill_processes": true,
+        "clean_folders": true,
+        "remove_cookies": true,
+        "flush_dns": true,
+        "restart_explorer": false,
+        "clean_registry": true,
+        "clean_prefetch": true
+    },
+    "roblox": {
+        "download_roblox": true,
+        "launch_roblox_on_exit": false,
+        "create_appsettings": true
+    },
+    "tools": {
+        "run_byebanasync": true
+    },
+    "paths": {
+        "temp_folders": [
+            "%temp%",
+            "%temp%/*",
+            "%localappdata%\\Temp"
+        ],
+        "roblox_folders": [
+            "%localappdata%\\Roblox",
+            "%appdata%\\Roblox",
+            "%appdata%\\Local\\Roblox"
+        ]
+    },
+    "processes": {
+        "roblox_processes": [
+            "RobloxPlayerBeta.exe",
+            "RobloxPlayerInstaller.exe"
+        ]
+    },
+    "registry": {
+        "registry_paths": [
+            "HKCU\\Software\\Roblox",
+            "HKLM\\SOFTWARE\\Roblox Corporation"
+        ]
+    },
+    "advanced": {
+        "show_command_output": true,
+        "force_file_deletion": true,
+        "skip_confirmation_prompts": false,
+        "auto_restart_after_cleaning": false
+    }
+}
