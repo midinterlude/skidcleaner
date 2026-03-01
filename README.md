@@ -2,8 +2,6 @@
  
 A packaged executable version of skidcleaner, a powerful tool for cleaning Roblox-related files and registry entries with advanced ban evasion capabilities.
 
-![Configuration UI](https://i.imgur.com/mSxITiW)
-
 
 <img src="https://i.imgur.com/mSxITiW.png" alt="config ui">
 
