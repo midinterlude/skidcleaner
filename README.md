@@ -1,33 +1,43 @@
+<div align="center">
+
 # slate. - https://discord.gg/HQbG5NFAS3
  
 A packaged executable version of slate, a powerful tool for cleaning Roblox-related files and registry entries with advanced ban evasion capabilities.
 
- 
+---
+
 ## 🚀 Quick Start
- 
-1. **Extract** the package to a directory of your choice
-2. **Run** `slate.exe` as Administrator (required for registry operations)
-3. The script will automatically install dependencies and clean your system
- 
+</div>
+
+1. **Extract** the package to a directory of your choice.
+2. **Run** `slate.exe` as Administrator (required for registry operations).
+3. The script will automatically install dependencies and clean your system.
+
+<div align="center">
+
 ## 📁 Package Contents
- 
-- `slate.exe` - Main cleaning executable (compiled with PyInstaller)
-- `slate.config.json` - Default configuration file
-- `cacert.pem` - SSL certificate bundle for secure downloads
-- `README.md` - This file
- 
+</div>
+
+* `slate.exe` - Main cleaning executable (compiled with PyInstaller)
+* `slate.config.json` - Default configuration file
+* `cacert.pem` - SSL certificate bundle for secure downloads
+* `README.md` - This file
+
+<div align="center">
+
 ## ⚙️ Configuration
- 
+</div>
+
 The script uses `slate.config.json` for settings. You can edit this file to customize behavior:
- 
+
 ### Key Settings
- 
-- **General**: Logging, console capture, screen clearing
-- **Cleaning**: Toggle file cleaning, process killing, registry cleanup
-- **Roblox**: Download fresh client, auto-launch after cleaning
-- **Tools**: Enable ByeBanAsync for advanced ban evasion
-- **Advanced**: Command outputs, file deletion force, auto-restart
- 
+
+* **General**: Logging, console capture, screen clearing.
+* **Cleaning**: Toggle file cleaning, process killing, registry cleanup.
+* **Roblox**: Download fresh client, auto-launch after cleaning.
+* **Tools**: Enable ByeBanAsync for advanced ban evasion.
+* **Advanced**: Command outputs, file deletion force, auto-restart.
+
 ### Example Configuration
 ```json
 {
@@ -86,25 +96,37 @@ The script uses `slate.config.json` for settings. You can edit this file to cust
     }
 }
 ```
- 
-## 🔧 Usage
- 
+<div align="center">
+
 ### Basic Usage
 ```bash
 # Run with default settings
 slate.exe
 ```
- 
+
+<div align="center">
+
 ### Configuration
+
+</div>
 1. Run `config.html` (any browser is fine)
 2. Go through options and toggle what you want
 3. put the given file within the same folder as slate.exe & cacert.pem
 4. Run `slate.exe`
 5. The script will use your custom configuration
- 
+
+<div align="center">
+
 ## 🛡️ Features
- 
+
+</div>
+
+<div align="center">
+
 ### Comprehensive Cleaning
+
+</div>
+
 - ✅ Kill Roblox processes safely
 - ✅ Clean temporary files and Roblox directories
 - ✅ Remove Roblox cookies and cache
@@ -113,46 +135,81 @@ slate.exe
 - ✅ Remove prefetch files
 - ✅ Optional Explorer restart
 - ✅ Removes any traces of files
- 
+
+<div align="center">
+
 ### Roblox Management
+
+</div>
 - ✅ Download fresh Roblox client from WEAO API
 - ✅ Auto-launch Roblox after cleaning
- 
+
+<div align="center">
+
 ### Advanced Ban Evasion
+
+</div>
+
 - ✅ **ByeBanAsync Python Port** - Imported ByeBanAsync into python for proven MAC address spoofing (credits to: centerepic)
 - ✅ **Registry cleanup** - Remove all Roblox traces
 - ✅ **Network adapter management** - Restart adapters after changes
  
+
+<div align="center">
+
 ## 📋 Requirements
- 
+
+</div>
+
 - **Windows 10/11**
 - **Administrator privileges** (required for registry and file operations)
 - **Internet connection** (for Roblox downloads)
  
+
+<div align="center">
+
 ## 🔍 Logs
- 
+
+</div>
+
 All operations are logged to:
 ```
 %temp%\slate\slate.log
 ```
  
 The log includes console history, command outputs, file operations, and error messages.
- 
+
+<div align="center">
+
 ## ⚠️ Safety & Security
- 
+
+</div>
+
 - **Administrator privileges required**
 - **Backup important data** before running
 - **Use at your own risk**
 
+<div align="center">
+
 ## ⚠️ Warning
+
+</div>
 
 - **Make sure** to log out of any roblox accounts on your browser
 - **Clear your browsers's cookies** before running this application.
- 
+
+<div align="center">
+
 ## 🐛 Troubleshooting
- 
+
+</div>
+
+ <div align="center">
+
 ### Common Issues
- 
+
+</div>
+
 1. **"Access Denied" Errors**
    - Ensure you're running as Administrator
    - Close any open Roblox applications
@@ -165,9 +222,13 @@ The log includes console history, command outputs, file operations, and error me
 3. **Configuration Not Loading**
    - Ensure `slate.config.json` is in the same directory
    - Check JSON syntax with an online validator
- 
+
+<div align="center">
+
 ## 👥 Support
- 
+
+</div>
+
 For issues and support:
 - Check the log file: `%temp%\slate\slate.log`
 - DM 'midinterlude' on Discord with the log file
@@ -175,4 +236,4 @@ For issues and support:
  
 ---
 
-https://github.com/midinterlude/skidcleaner
+https://github.com/midinterlude/slate
