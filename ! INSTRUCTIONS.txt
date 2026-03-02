@@ -17,7 +17,7 @@
 
  Files:
  - slate.exe: Main cleaning executable (compiled with PyInstaller)
- - slate.config.json: Default Configuration file
+ - slate.config.json: Minimal Configuration file
  
  Usage:
  1. Extract this package to a directory with your generated slate.config.json in it.
