@@ -1,4 +1,4 @@
-import threading, sys, subprocess, os , shutil, glob, json, stat, uuid
+import threading, sys, subprocess, os , shutil, glob, json, stat, uuid, time
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if hasattr(sys, "_MEIPASS"):
@@ -13,62 +13,40 @@ LP = os.path.expandvars(r"%temp%\slate\slate.log")
 
 def load_config():
     config_path = os.path.join(os.path.dirname(__file__), "slate.config.json")
+    
+    if not os.path.exists(config_path):
+        print("❌ Required configuration file not found: slate.config.json")
+        print("Please visit https://midinterlude.github.io/slate/ to get the configuration file")
+        print("The link has been copied to your clipboard.")
+        
+        try:
+            import pyperclip
+            pyperclip.copy("https://midinterlude.github.io/slate/")
+        except ImportError:
+            try:
+                # Fallback method using Windows clipboard
+                import subprocess
+                subprocess.run(['cmd', '/c', 'echo https://midinterlude.github.io/slate/ | clip'], shell=True, capture_output=True)
+            except:
+                print("Could not copy link to clipboard automatically. Please manually copy: https://midinterlude.github.io/slate/")
+        
+        auto_close_after_delay()
+        sys.exit(1)
+    
     try:
-        if os.path.exists(config_path):
-            with open(config_path, "r") as f:
-                return json.load(f)
+        with open(config_path, "r") as f:
+            config = json.load(f)
+            print(f"✅ Configuration loaded from: slate.config.json")
+            return config
+    except json.JSONDecodeError as e:
+        print(f"❌ Invalid JSON in configuration file: {e}")
+        print("Please check your slate.config.json file for syntax errors.")
+        auto_close_after_delay()
+        sys.exit(1)
     except Exception as e:
-        print(f"Warning: Could not load config file: {e}")
-        pass
-    return get_default_config()
-
-def get_default_config():
-    return {
-        "general": {
-            "log_enabled": True,
-            "open_log_on_exit": False,
-            "clear_screen_on_sections": True,
-        },
-        "cleaning": {
-            "kill_processes": True,
-            "clean_folders": True,
-            "remove_cookies": True,
-            "flush_dns": True,
-            "restart_explorer": False,
-            "clean_registry": True,
-            "clean_prefetch": True,
-        },
-        "roblox": {
-            "download_roblox": True,
-            "launch_roblox_on_exit": False,
-            "create_appsettings": True,
-        },
-        "tools": {"run_byebanasync": True},
-        "paths": {
-            "temp_folders": ["%temp%", "%temp%/*", "%localappdata%\\Temp"],
-            "roblox_folders": [
-                "%localappdata%\\Roblox",
-                "%appdata%\\Roblox",
-                "%appdata%\\Local\\Roblox",
-            ],
-        },
-        "processes": {
-            "roblox_processes": ["RobloxPlayerBeta.exe", "RobloxPlayerInstaller.exe"]
-        },
-        "registry": {
-            "registry_paths": [
-                "HKCU\\Software\\Roblox",
-                "HKLM\\SOFTWARE\\Roblox Corporation",
-            ]
-        },
-        "advanced": {
-            "show_command_output": True,
-            "force_file_deletion": True,
-            "skip_confirmation_prompts": False,
-            "auto_restart_after_cleaning": False,
-        },
-    }
-
+        print(f"❌ Error loading configuration file: {e}")
+        auto_close_after_delay()
+        sys.exit(1)
 
 def ensure_dependencies():
     missing = []
@@ -167,6 +145,34 @@ def log(message):
                 f.flush()
         except Exception as e:
             print(f"Log write error: {e}")
+
+def auto_close_after_delay():
+    """Automatically close the application after 15 seconds, with Enter key to skip"""
+    print("="*51)
+    print("This window will automatically close in 15 seconds.")
+    print("Press Enter to close immediately...")
+    print("="*51)
+    
+    start_time = time.time()
+    delay = 15
+    
+    # Use a non-blocking input approach
+    import msvcrt
+    
+    while time.time() - start_time < delay:
+        remaining = int(delay - (time.time() - start_time))
+        print(f"\rClosing in {remaining} seconds... (Press Enter to close)", end="", flush=True)
+        
+        # Check if Enter key is pressed
+        if msvcrt.kbhit():
+            key = msvcrt.getch()
+            if key == b'\r':  # Enter key
+                print("\nClosing immediately...")
+                break
+        
+        time.sleep(0.1)
+    
+    print("\n")
 
 def validate_config(config):
 
@@ -862,8 +868,12 @@ def main():
     config = load_config()
 
     if not validate_config(config):
-        print("Invalid configuration. Using default settings.")
-        config = get_default_config()
+        print("❌ Invalid configuration. Please fix the issues in slate.config.json")
+        raise ConfigurationError(
+            "Configuration validation failed",
+            operation="validate_config",
+            details={"config": config}
+        )
 
     print(BANNER)
     print(" Slate - Roblox Cleaning Tool")
@@ -1121,7 +1131,7 @@ def main():
             if LOG:
                 pass
             if not config["advanced"]["skip_confirmation_prompts"]:
-                input("Press Enter to exit.")
+                auto_close_after_delay()
             if OPEN_LOG and LOG:
                 log_thread = threading.Thread(target=open_log_async, daemon=True)
                 log_thread.start()
@@ -1130,6 +1140,8 @@ def main():
     except KeyboardInterrupt:
         log("\n⚠️  Operation cancelled by user")
         print("\nOperation cancelled by user.")
+        auto_close_after_delay()
+        os._exit(1)
     except SlateError as e:
         log(f"\n❌ Slate error in {e.operation}: {e}")
         log(f"🔍 Error details: {e.details}")
