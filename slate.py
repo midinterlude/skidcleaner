@@ -378,23 +378,45 @@ def title():
     print(BANNER)
 
 
-def get_roblox_client_settings():
+def get_roblox_client_settings(config=None):
     try:
         import requests
         import urllib3
 
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-        version_url = "https://weao.xyz/api/versions/current"
+        
+        # Determine which API to use based on config
+        use_past_versions = config and config.get("roblox", {}).get("use_past_versions", False) if config else False
+        
+        if use_past_versions:
+            version_url = "https://weao.xyz/api/versions/past"
+            log(f"Fetching past version info from: {version_url}")
+        else:
+            version_url = "https://weao.xyz/api/versions/current"
+            log(f"Fetching version info from: {version_url}")
+        
         headers = {"User-Agent": "WEAO-3PService/1.0"}
-        log(f"Fetching version info from: {version_url}")
         response = requests.get(version_url, headers=headers, verify=False)
         response.raise_for_status()
         version_data = response.json()
         log("WEAO Version Response:")
         log(json.dumps(version_data, indent=2))
-        version_hash = version_data.get("Windows", "")
-        if not version_hash:
-            raise Exception("No Windows version found in WEAO response")
+        
+        # Handle different response formats
+        if use_past_versions:
+            # For past versions API, get the last version from the list
+            if isinstance(version_data, list) and version_data:
+                version_hash = version_data[-1].get("Windows", "")
+                if not version_hash:
+                    raise Exception("No Windows version found in last past version")
+            else:
+                raise Exception("Invalid response format from past versions API")
+        else:
+            # For current versions API (existing logic)
+            version_hash = version_data.get("Windows", "")
+            if not version_hash:
+                raise Exception("No Windows version found in WEAO response")
+        
         log(f"Found Windows version: {version_hash}")
         base_hash = version_hash.replace("version-", "")
         extract_roots = {
@@ -939,6 +961,9 @@ def main():
                 f"  • Download Roblox: {'Enabled' if config.get('roblox', {}).get('download_roblox', False) else 'Disabled'}"
             )
             print(
+                f"  • Use Past Versions: {'Enabled' if config.get('roblox', {}).get('use_past_versions', False) else 'Disabled'}"
+            )
+            print(
                 f"  • Launch Roblox: {'Enabled' if config.get('roblox', {}).get('launch_roblox_on_exit', False) else 'Disabled'}"
             )
             print(
@@ -1083,7 +1108,7 @@ def main():
         if config["roblox"]["download_roblox"]:
             log_operation_start("Roblox client download")
             try:
-                rdd_url = get_roblox_client_settings()
+                rdd_url = get_roblox_client_settings(config)
                 log_operation_end("Roblox client download")
             except DownloadError as e:
                 log_operation_end("Roblox client download", False, str(e))
