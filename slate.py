@@ -2,17 +2,32 @@ import threading, sys, subprocess, os , shutil, glob, json, stat, uuid, time
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if hasattr(sys, "_MEIPASS"):
-    slate_dir = os.path.dirname(script_dir)
+    slate_dir = sys._MEIPASS  # Temporary extraction directory for bundled files
 else:
     slate_dir = script_dir
-cert_path = os.path.join(slate_dir, "cacert.pem")
+
+# Handle certificate path for both modes
+if hasattr(sys, "_MEIPASS"):
+    # For compiled exe, look for cert in the exe directory
+    cert_path = os.path.join(os.path.dirname(sys.executable), "cacert.pem")
+else:
+    # For script mode, look in script directory
+    cert_path = os.path.join(slate_dir, "cacert.pem")
+    
 if os.path.exists(cert_path):
     os.environ["SSL_CERT_FILE"] = cert_path
 
 LP = os.path.expandvars(r"%temp%\slate\slate.log")
 
 def load_config():
-    config_path = os.path.join(os.path.dirname(__file__), "slate.config.json")
+    if hasattr(sys, "_MEIPASS"):
+        # Running as compiled exe - config should be in the same directory as the exe
+        # sys.executable gives the path to the executable
+        exe_dir = os.path.dirname(sys.executable)
+        config_path = os.path.join(exe_dir, "slate.config.json")
+    else:
+        # Running as script - config should be in the same directory as the script
+        config_path = os.path.join(slate_dir, "slate.config.json")
     
     if not os.path.exists(config_path):
         print("❌ Required configuration file not found: slate.config.json")
@@ -50,17 +65,29 @@ def load_config():
 
 def ensure_dependencies():
     missing = []
-    for pkg in ("pyuac", "requests", "tqdm"):
+    for pkg in ("requests", "tqdm"):
         try:
             __import__(pkg)
         except ImportError:
             missing.append(pkg)
     if missing:
         print(f"Installing missing packages: {', '.join(missing)}")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
+            print(f"Successfully installed: {', '.join(missing)}")
+        except subprocess.CalledProcessError as e:
+            print(f"Failed to install packages: {e}")
+            print("Please install the following packages manually:")
+            for pkg in missing:
+                print(f"  pip install {pkg}")
+            input("Press Enter to exit...")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Unexpected error during package installation: {e}")
+            input("Press Enter to exit...")
+            sys.exit(1)
 
 ensure_dependencies()
-import pyuac
 
 class SlateError(Exception):
 
@@ -373,8 +400,9 @@ BANNER = r"""
  by: midinterlude (logs can be found in %temp%\\slate\\slate.log)
  """
 
-def title():
-    os.system("cls")
+def title(config=None):
+    if config and config.get("general", {}).get("clear_screen_on_sections", False):
+        os.system("cls")
     print(BANNER)
 
 
@@ -481,13 +509,14 @@ def get_roblox_client_settings(config=None):
                     total_size = int(response.headers.get("content-length", 0))
                     with open(temp_file, "wb") as f:
                         class CustomProgressBar:
-                            def __init__(self, total, desc, package_index, total_packages):
+                            def __init__(self, total, desc, package_index, total_packages, config=None):
                                 self.total = total
                                 self.desc = desc
                                 self.current = 0
                                 self.last_update = 0
                                 self.package_index = package_index
                                 self.total_packages = total_packages
+                                self.config = config
                             
                             def update(self, chunk_size):
                                 self.current += chunk_size
@@ -503,7 +532,7 @@ def get_roblox_client_settings(config=None):
                                     overall_bar = '█' * overall_filled + '░' * (bar_length - overall_filled)
                                     
                                     print(f"\r{self.desc} {percentage:.1f}% |{bar}|\n\n  Total Progress {overall_percentage:.1f}% |{overall_bar}|", end="", flush=True)
-                                    title()
+                                    title(self.config)
                                     self.last_update = self.current
                             
                             def close(self):
@@ -513,7 +542,7 @@ def get_roblox_client_settings(config=None):
                                 overall_bar = '█' * overall_filled + '░' * (bar_length - overall_filled)
                                 print(f"\r{self.desc} 100.0% |{'█' * bar_length}|\n\n  Total Progress {overall_percentage:.1f}% |{overall_bar}|", flush=True)
                         
-                        file_pbar = CustomProgressBar(total_size, f"  {package}", package_index, len(extract_roots))
+                        file_pbar = CustomProgressBar(total_size, f"  {package}", package_index, len(extract_roots), config)
                         try:
                             for chunk in response.iter_content(chunk_size=8192):
                                 if chunk:
@@ -897,7 +926,7 @@ def main():
             details={"config": config}
         )
 
-    print(BANNER)
+    title(config)
     print(" Slate - Roblox Cleaning Tool")
 
     global LOG, OPEN_LOG, LP, PROCS, PATHS, REGS
@@ -1042,7 +1071,7 @@ def main():
                 log("  ❌ Error flushing DNS cache")
                 errors.append("DNS flush failed")
         if config["general"]["clear_screen_on_sections"]:
-            title()
+            title(config)
         if config["cleaning"]["restart_explorer"]:
             log_operation_start("Explorer restart")
             try:
@@ -1051,7 +1080,7 @@ def main():
                 run_command(["explorer.exe"])
                 log("  ✅ Explorer restarted")
                 log_operation_end("Explorer restart")
-                title()
+                title(config)
             except ProcessError as e:
                 log_operation_end("Explorer restart", False, str(e))
                 errors.append(f"Explorer restart failed: {e}")
@@ -1073,7 +1102,7 @@ def main():
                 )
             else:
                 log_operation_end("Registry cleanup")
-            title()
+            title(config)
         if config["cleaning"]["clean_prefetch"]:
             log_operation_start("Prefetch cleanup")
             prefetch_files = glob.glob(PF)
@@ -1085,19 +1114,20 @@ def main():
                         log(f"  ✅ Removed prefetch: {os.path.basename(file)}")
                     except Exception as e:
                         error_msg = f"Error removing prefetch file {file}: {e}"
+                        prefetch_errors.append(error_msg)
                         log(f"  ❌ {error_msg}")
-                        prefetch_errors.append({"file": file, "error": str(e)})
-                log_operation_end("Prefetch cleanup")
+                if prefetch_errors:
+                    log_operation_end("Prefetch cleanup", False, f"Failed to remove {len(prefetch_errors)} files")
+                else:
+                    log_operation_end("Prefetch cleanup")
             else:
                 log("  - No prefetch files found")
                 log_operation_end("Prefetch cleanup")
-            title()
+            title(config)
+        
         if config["tools"]["run_byebanasync"]:
             log_operation_start("ByeBanAsync")
             try:
-                log(
-                    "\nByeBanAsync's python port - original credits to @centerepic"
-                )
                 byebanasync(wait=True)
                 log_operation_end("ByeBanAsync")
             except (NetworkError, ProcessError) as e:
@@ -1137,7 +1167,7 @@ def main():
                     should_launch = launch_choice.lower().strip() in ["confirm", "yes", "y"]
                 
                 if should_launch:
-                    title()
+                    title(config)
                     log_operation_start("Roblox launch")
                     if launch_roblox():
                         log_operation_end("Roblox launch")
@@ -1183,9 +1213,10 @@ def main():
             print(f"📋 Check log file for details: {LP}")
 
 if __name__ == "__main__":
-    if not pyuac.isUserAdmin():
-        pyuac.runAsAdmin()
-        exit()
-    else:
+    try:
         main()
+    except Exception as e:
+        print(f"Failed to start application: {e}")
+        input("Press Enter to exit...")
+        exit(1)
 
