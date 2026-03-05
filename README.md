@@ -29,6 +29,7 @@ A packaged executable version of slate, a powerful tool for cleaning Roblox-rela
 </div>
 
 The script uses `slate.config.json` for settings. You can edit this file to customize behavior:
+You can use the web configurator [here](https://midinterlude.github.io/slate/)
 
 ### Key Settings
 
