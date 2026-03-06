@@ -100,10 +100,13 @@ You can use the web configurator [here](https://midinterlude.github.io/slate/)
 <div align="center">
 
 ### Basic Usage
+</div>
+<div align="left">
 ```bash
 # Run with default settings
 slate.exe
 ```
+</div>
 
 <div align="center">
 
@@ -111,11 +114,11 @@ slate.exe
 
 </div>
 <div align="left">
-1. Run `config.html` (any browser is fine)
-2. Go through options and toggle what you want
-3. put the given file within the same folder as slate.exe & cacert.pem
-4. Run `slate.exe`
-5. The script will use your custom configuration
+1. Run `config.html` (any browser is fine)\
+2. Go through options and toggle what you want\
+3. put the given file within the same folder as slate.exe & cacert.pem\
+4. Run `slate.exe`\
+5. The script will use your custom configuration\
 </div>
 
 <div align="center">
@@ -130,13 +133,13 @@ slate.exe
 
 </div>
 <div align="left">
-- ✅ Kill Roblox processes safely
-- ✅ Clean temporary files and Roblox directories
-- ✅ Remove Roblox cookies and cache
-- ✅ Flush DNS cache
-- ✅ Clean Windows registry entries
-- ✅ Remove prefetch files
-- ✅ Optional Explorer restart
+- ✅ Kill Roblox processes safely\
+- ✅ Clean temporary files and Roblox directories\
+- ✅ Remove Roblox cookies and cache\
+- ✅ Flush DNS cache\
+- ✅ Clean Windows registry entries\
+- ✅ Remove prefetch files\
+- ✅ Optional Explorer restart\
 - ✅ Removes any traces of files
 </div>
 <div align="center">
@@ -145,8 +148,8 @@ slate.exe
 
 </div>
 <div align="left">
-- ✅ Download fresh Roblox client from WEAO API
-- ✅ Auto-launch Roblox after cleaning
+- ✅ Download fresh Roblox client from WEAO API\
+- ✅ Auto-launch Roblox after cleaning\
 </div>
 <div align="center">
 
@@ -154,8 +157,8 @@ slate.exe
 
 </div>
 <div align="left">
-- ✅ **ByeBanAsync Python Port** - Imported ByeBanAsync into python for proven MAC address spoofing (credits to: centerepic)
-- ✅ **Registry cleanup** - Remove all Roblox traces
+- ✅ **ByeBanAsync Python Port** - Imported ByeBanAsync into python for proven MAC address spoofing (credits to: centerepic)\
+- ✅ **Registry cleanup** - Remove all Roblox traces\
 - ✅ **Network adapter management** - Restart adapters after changes
  </div>
 
@@ -165,8 +168,8 @@ slate.exe
 
 </div>
 <div align="left">
-- **Windows 10/11**
-- **Administrator privileges** (required for registry and file operations)
+- **Windows 10/11**\
+- **Administrator privileges** (required for registry and file operations)\
 - **Internet connection** (for Roblox downloads)
  </div>
 
@@ -176,10 +179,10 @@ slate.exe
 
 </div>
 <div align="left">
-All operations are logged to:
+All operations are logged to:\
 ```
 %temp%\slate\slate.log
-```
+```\
  
 The log includes console history, command outputs, file operations, and error messages.
 
@@ -190,8 +193,8 @@ The log includes console history, command outputs, file operations, and error me
 
 </div>
 <div align="left">
-- **Administrator privileges required**
-- **Backup important data** before running
+- **Administrator privileges required**\
+- **Backup important data** before running\
 - **Use at your own risk**
 </div>
 
@@ -201,7 +204,7 @@ The log includes console history, command outputs, file operations, and error me
 
 </div>
 <div align="left">
-- **Make sure** to log out of any roblox accounts on your browser
+- **Make sure** to log out of any roblox accounts on your browser\
 - **Clear your browsers's cookies** before running this application.
  
 </div>
@@ -217,18 +220,18 @@ The log includes console history, command outputs, file operations, and error me
 
 </div>
 <div align="left">
-1. **"Access Denied" Errors**
-   - Ensure you're running as Administrator
-   - Close any open Roblox applications
+1. **"Access Denied" Errors**\
+   - Ensure you're running as Administrator\
+   - Close any open Roblox applications\\
  
-2. **Download Failures**
-   - Check internet connection
-   - Verify firewall/antivirus isn't blocking
-   - Try using a VPN if downloads fail (We recommend Cloudflare Warp or ProtonVPN)
+2. **Download Failures**\
+   - Check internet connection\
+   - Verify firewall/antivirus isn't blocking\
+   - Try using a VPN if downloads fail (We recommend Cloudflare Warp or ProtonVPN)\
  
-3. **Configuration Not Loading**
-   - Ensure `slate.config.json` is in the same directory
-   - Check JSON syntax with an online validator
+3. **Configuration Not Loading**\
+   - Ensure `slate.config.json` is in the same directory\
+   - Check JSON syntax with an online validator\
 </div>
 <div align="center">
 
@@ -236,12 +239,12 @@ The log includes console history, command outputs, file operations, and error me
 
 </div>
 <div align="left">
-For issues and support:
-- Check the log file: `%temp%\slate\slate.log`
-- DM 'midinterlude' on Discord with the log file
-- additionally, you can join the discord server found [here](https://discord.gg/HQbG5NFAS3)
+For issues and support:\
+- Check the log file: `%temp%\slate\slate.log`\
+- DM 'midinterlude' on Discord with the log file\
+- additionally, you can join the discord server found [here](https://discord.gg/HQbG5NFAS3)\\
  
----
+---\\
 
-https://github.com/midinterlude/slate
+https://github.com/midinterlude/slate\
 </div>
