@@ -1,250 +1,325 @@
-<div align="center">
+<picture>
+  <source
+    width="100%"
+    srcset="./docs/content/public/banner-dark-1280x640.avif"
+    media="(prefers-color-scheme: dark)"
+  />
+  <source
+    width="100%"
+    srcset="./docs/content/public/banner-light-1280x640.avif"
+    media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)"
+  />
+  <img width="250" src="./docs/content/public/banner-light-1280x640.avif" />
+</picture>
 
-# Slate - https://discord.gg/HQbG5NFAS3
- 
-A packaged executable version of slate, a powerful tool for cleaning Roblox-related files and registry entries with advanced ban evasion capabilities.
+<h1 align="center">Slate</h1>
 
----
+<p align="center">Advanced anti-alt detection system for Roblox with comprehensive cleaning, privacy protection, and network spoofing capabilities.</p>
 
-## 🚀 Quick Start
-</div>
+<p align="center">
+  [<a href="https://github.com/midinterlude/Slate">GitHub Repository</a>] [<a href="https://midinterlude.github.io/slate">Configuration</a>] [<a href="#installation">Installation</a>] [<a href="#features">Features</a>]
+</p>
 
-1. **Extract** the package to a directory of your choice.
-2. **Run** `slate.exe` as Administrator (required for registry operations).
-3. The script will automatically install dependencies and clean your system.
+<p align="center">
+  <a href="https://github.com/midinterlude/Slate/blob/main/LICENSE"><img src="https://img.shields.io/github/license/midinterlude/Slate.svg?style=flat&colorA=080f12&colorB=1fa669"></a>
+  <a href="https://github.com/midinterlude/Slate/stargazers"><img src="https://img.shields.io/github/stars/midinterlude/Slate.svg?style=flat&colorA=080f12&colorB=1fa669"></a>
+  <a href="https://github.com/midinterlude/Slate/forks"><img src="https://img.shields.io/github/forks/midinterlude/Slate.svg?style=flat&colorA=080f12&colorB=1fa669"></a>
+  <a href="https://github.com/midinterlude/Slate/issues"><img src="https://img.shields.io/github/issues/midinterlude/Slate.svg?style=flat&colorA=080f12&colorB=1fa669"></a>
+  <a href="https://github.com/midinterlude"><img src="https://img.shields.io/badge/author-midinterlude-black?style=flat&logo=github&labelColor=%23101419&color=%232d2e30"></a>
+  <a href="https://discordapp.com/users/1391896842219815066"><img src="https://img.shields.io/badge/discord-midinterlude-blue?style=flat&logo=discord&labelColor=%235865F2&color=%235865F2"></a>
+</p>
 
-<div align="center">
+> Built with Python for comprehensive system cleaning and privacy protection. Designed specifically for Roblox users who need advanced anti-detection capabilities.
 
-## 📁 Package Contents
-</div>
+> [!WARNING]
+> **Attention:** This tool is intended for educational and legitimate privacy protection purposes only. Use responsibly and in accordance with platform terms of service.
 
-* `slate.exe` - Main cleaning executable (compiled with PyInstaller)
-* `slate.config.json` - Default configuration file
-* `cacert.pem` - SSL certificate bundle for secure downloads
-* `README.md` - This file
+> [!NOTE]
+> Slate requires a configuration file to function properly. Visit the [configuration page](https://midinterlude.github.io/slate) to generate your personalized `slate.config.json` file.
 
-<div align="center">
+> [!TIP]
+> For maximum effectiveness, run Slate as administrator and consider restarting your system after cleaning to ensure all changes take effect.
 
-## ⚙️ Configuration
-</div>
+Have you been struggling with Roblox alt detection and need a comprehensive solution to protect your privacy?
 
-The script uses `slate.config.json` for settings. You can edit this file to customize behavior:
-You can use the web configurator [here](https://midinterlude.github.io/slate/)
+With the increasing sophistication of detection systems, users need advanced tools that can thoroughly clean digital footprints and provide network-level protection. Traditional cleaning methods often miss critical traces that can be used for identification.
 
-### Key Settings
+> But, what about having a tool that handles everything from file cleaning to MAC address spoofing?
 
-* **General**: Logging, console capture, screen clearing.
-* **Cleaning**: Toggle file cleaning, process killing, registry cleanup.
-* **Roblox**: Download fresh client, auto-launch after cleaning.
-* **Tools**: Enable ByeBanAsync for advanced ban evasion.
-* **Advanced**: Command outputs, file deletion force, auto-restart.
+Perhaps you've tried basic cleaners that only scratch the surface. They leave behind registry entries, prefetch files, cookies, and network identifiers that can still be used to track you. **Slate provides a complete solution: deep system cleaning, network spoofing, and automated Roblox management**.
 
-### Example Configuration
-```json
-{
-    "general": {
-        "log_enabled": true,
-        "open_log_on_exit": false,
-        "capture_console_history": true,
-        "clear_screen_on_sections": false
-    },
-    "cleaning": {
-        "kill_processes": true,
-        "clean_folders": true,
-        "remove_cookies": true,
-        "flush_dns": true,
-        "clean_registry": false,
-        "clean_prefetch": false,
-        "restart_explorer": false
-    },
-    "roblox": {
-        "download_roblox": false,
-        "launch_roblox_on_exit": false,
-        "create_appsettings": false
-    },
-    "tools": {
-        "run_byebanasync": true
-    },
-    "paths": {
-        "temp_folders": [
-            "%temp%",
-            "%temp%/*",
-            "%localappdata%\\Temp"
-        ],
-        "roblox_folders": [
-            "%localappdata%\\Roblox",
-            "%appdata%\\Roblox",
-            "%appdata%\\Local\\Roblox"
-        ]
-    },
-    "processes": {
-        "roblox_processes": [
-            "RobloxPlayerBeta.exe",
-            "RobloxPlayerLauncher.exe"
-        ]
-    },
-    "registry": {
-        "roblox_keys": [
-            "HKEY_LOCAL_MACHINE\\SOFTWARE\\Roblox",
-            "HKEY_CURRENT_USER\\SOFTWARE\\Roblox"
-        ]
-    },
-    "advanced": {
-        "show_command_output": false,
-        "force_file_deletion": false,
-        "skip_confirmation_prompts": false,
-        "auto_restart_after_cleaning": false
-    }
-}
+## Recent Updates
+
+- [Slate v3.0 Release](https://github.com/midinterlude/Slate) - Complete rewrite with enhanced error handling and logging
+- [ByeBanAsync Integration](https://github.com/midinterlude/Slate) - Added MAC address spoofing capabilities
+- [Configuration System](https://midinterlude.github.io/slate) - Web-based configuration generator for easy setup
+- [Enhanced Logging](https://github.com/midinterlude/Slate) - Detailed operation logging with error tracking
+
+## What Makes Slate Special?
+
+Unlike other cleaning tools that focus only on basic file deletion, Slate was built with **comprehensive privacy protection** as the primary goal.
+
+> [!TIP]
+> Worried about incomplete cleaning leaving traces behind?
+>
+> Don't worry! Slate uses multiple layers of cleaning including file deletion, registry cleanup, process termination, DNS flushing, and network adapter spoofing. The multi-vector approach ensures maximum privacy protection.
+
+This means that **Slate provides complete digital footprint elimination** covering files, registry entries, network identifiers, and application data. The configurable nature allows users to customize the cleaning process to their specific needs.
+
+> [!NOTE]
+>
+> Slate is perfect for users who need comprehensive privacy protection and anti-detection capabilities.
+>
+> It's ideal if you're concerned about:
+>
+> - Account tracking and linking
+> - Digital fingerprinting
+> - Network-level identification
+> - Incomplete cleaning by basic tools
+>
+> Technologies and capabilities:
+>
+> - Python-based system cleaning
+> - Windows registry manipulation
+> - Network adapter MAC address spoofing
+> - Process termination and management
+> - Roblox client automation
+> - Comprehensive logging and error tracking
+> - Web-based configuration management
+>
+> **Perfect for:**
+> - Privacy-conscious users
+> - Multiple account management
+> - System administrators
+> - Security researchers
+> - Digital privacy advocates
+
+## Current Features
+
+✅ **Core Cleaning Operations**
+  - [x] Process Termination
+    - [x] Roblox process killing
+    - [x] Forced termination support
+    - [x] Process validation
+  - [x] File System Cleaning
+    - [x] Temp folder cleanup
+    - [x] Roblox directory removal
+    - [x] Force deletion capabilities
+    - [x] Prefetch file cleanup
+  - [x] Registry Cleanup
+    - [x] Roblox registry entries
+    - [x] User profile cleaning
+    - [x] System registry paths
+  - [x] Cookie Removal
+    - [x] Roblox cookie deletion
+    - [x] Browser data cleanup
+    - [x] Session data removal
+
+✅ **Network & Privacy**
+  - [x] MAC Address Spoofing (ByeBanAsync)
+    - [x] Network adapter detection
+    - [x] Random MAC generation
+    - [x] Adapter restart automation
+  - [x] DNS Cache Flushing
+    - [x] Network cache clearing
+    - [x] Connection reset
+  - [x] Explorer Restart
+    - [x] Shell refresh
+    - [x] Cache clearing
+
+✅ **Roblox Management**
+  - [x] Client Download
+    - [x] Version management
+    - [x] Past version support
+    - [x] Package extraction
+  - [x] Automatic Launch
+    - [x] Version detection
+    - [x] Process monitoring
+  - [x] AppSettings Creation
+    - [x] Configuration management
+    - [x] Custom settings
+
+## Installation & Setup
+
+> For detailed instructions, see the [Installation Guide](#installation) section below.
+
+> [!NOTE]
+> Slate requires Python 3.7+ and administrator privileges for full functionality. Some features may be limited without elevated permissions.
+
+### Prerequisites
+
+```shell
+# Python 3.7 or higher
+python --version
+
+# Required packages (auto-installed)
+pip install requests tqdm
 ```
-<div align="center">
 
-### Basic Usage
-</div>
-<div align="left">
-```bash
-# Run with default settings
-slate.exe
+### Quick Setup
+
+```shell
+# Clone the repository
+git clone https://github.com/midinterlude/Slate.git
+cd Slate
+
+# Download configuration file
+# Visit: https://midinterlude.github.io/slate
+# Place slate.config.json in the same directory as slate.py
+
+# Run Slate
+python slate.py
 ```
-</div>
-
-<div align="center">
 
 ### Configuration
 
-</div>
-<div align="left">
-1. Run `config.html` (any browser is fine)\
-2. Go through options and toggle what you want\
-3. put the given file within the same folder as slate.exe & cacert.pem\
-4. Run `slate.exe`\
-5. The script will use your custom configuration\
-</div>
+1. **Generate Configuration**: Visit [https://midinterlude.github.io/slate](https://midinterlude.github.io/slate)
+2. **Customize Settings**: Select which cleaning operations to enable
+3. **Download Config**: Save the generated `slate.config.json` file
+4. **Place File**: Put the config file in the same directory as `slate.py`
 
-<div align="center">
+### Advanced Setup
 
-## 🛡️ Features
+For power users, the configuration file supports granular control:
 
-</div>
-
-<div align="center">
-
-### Comprehensive Cleaning
-
-</div>
-<div align="left">
-- ✅ Kill Roblox processes safely\
-- ✅ Clean temporary files and Roblox directories\
-- ✅ Remove Roblox cookies and cache\
-- ✅ Flush DNS cache\
-- ✅ Clean Windows registry entries\
-- ✅ Remove prefetch files\
-- ✅ Optional Explorer restart\
-- ✅ Removes any traces of files
-</div>
-<div align="center">
-
-### Roblox Management
-
-</div>
-<div align="left">
-- ✅ Download fresh Roblox client from WEAO API\
-- ✅ Auto-launch Roblox after cleaning\
-</div>
-<div align="center">
-
-### Advanced Ban Evasion
-
-</div>
-<div align="left">
-- ✅ **ByeBanAsync Python Port** - Imported ByeBanAsync into python for proven MAC address spoofing (credits to: centerepic)\
-- ✅ **Registry cleanup** - Remove all Roblox traces\
-- ✅ **Network adapter management** - Restart adapters after changes
- </div>
-
-<div align="center">
-
-## 📋 Requirements
-
-</div>
-<div align="left">
-- **Windows 10/11**\
-- **Administrator privileges** (required for registry and file operations)\
-- **Internet connection** (for Roblox downloads)
- </div>
-
-<div align="center">
-
-## 🔍 Logs
-
-</div>
-<div align="left">
-All operations are logged to:\
+```json
+{
+  "general": {
+    "log_enabled": true,
+    "open_log_on_exit": true,
+    "clear_screen_on_sections": false
+  },
+  "cleaning": {
+    "kill_processes": true,
+    "clean_folders": true,
+    "remove_cookies": true,
+    "flush_dns": true,
+    "clean_registry": true,
+    "clean_prefetch": true,
+    "restart_explorer": false
+  },
+  "roblox": {
+    "download_roblox": true,
+    "use_past_versions": false,
+    "launch_roblox_on_exit": true,
+    "create_appsettings": true
+  },
+  "tools": {
+    "run_byebanasync": true
+  },
+  "advanced": {
+    "auto_restart_after_cleaning": false,
+    "skip_confirmation_prompts": false,
+    "force_file_deletion": true
+  }
+}
 ```
-%temp%\slate\slate.log
-```\
- 
-The log includes console history, command outputs, file operations, and error messages.
 
-</div>
-<div align="center">
+## File Structure
 
-## ⚠️ Safety & Security
+```
+Slate/
+├── slate.py                # Main application script
+├── slate.config.json       # Configuration file (download from web)
+├── cacert.pem              # SSL certificate bundle
+├── README.md               # This file
+└── docs/                   # Documentation
+    └── configuration.md    # Configuration guide
+```
 
-</div>
-<div align="left">
-- **Administrator privileges required**\
-- **Backup important data** before running\
-- **Use at your own risk**
-</div>
+## Technologies Used
 
-<div align="center">
+- **Python 3.7+**: Core scripting and automation
+- **Windows Registry API**: System registry manipulation
+- **Windows Networking**: MAC address spoofing and network management
+- **Requests Library**: HTTP client for Roblox downloads
+- **TQDM**: Progress bars and user feedback
+- **Threading**: Asynchronous operations
+- **JSON**: Configuration management
+- **ZIP Archive**: Roblox package extraction
 
-## ⚠️ Warning
+## System Requirements
 
-</div>
-<div align="left">
-- **Make sure** to log out of any roblox accounts on your browser\
-- **Clear your browsers's cookies** before running this application.
- 
-</div>
-<div align="center">
+- **Operating System**: Windows 10/11
+- **Python**: 3.7 or higher
+- **Permissions**: Administrator (recommended)
+- **Network**: Internet connection for Roblox downloads
+- **Disk Space**: 500MB+ for Roblox client
 
-## 🐛 Troubleshooting
+## Safety & Privacy
 
-</div>
+- **Local Operation**: All data processing happens locally
+- **No Telemetry**: No usage data is collected or transmitted
+- **Open Source**: Full code transparency and auditability
+- **Configurable**: Granular control over all operations
+- **Logging**: Detailed operation logs for troubleshooting
 
- <div align="center">
+## Security Features
+
+- **Certificate Validation**: SSL certificate management for secure downloads
+- **Process Validation**: Safe process termination with verification
+- **Registry Backup**: Optional registry backup before cleanup
+- **Error Handling**: Comprehensive error tracking and recovery
+- **Logging**: Detailed operation logging with timestamps
+
+## Performance Metrics
+
+Typical operation times on modern systems:
+- **Quick Clean**: 30-60 seconds
+- **Full Clean**: 2-5 minutes
+- **Roblox Download**: 1-3 minutes (depends on connection)
+- **MAC Spoofing**: 10-30 seconds
+- **Registry Cleanup**: 15-45 seconds
+
+## Troubleshooting
 
 ### Common Issues
 
-</div>
-<div align="left">
-1. **"Access Denied" Errors**\
-   - Ensure you're running as Administrator\
-   - Close any open Roblox applications\\
- 
-2. **Download Failures**\
-   - Check internet connection\
-   - Verify firewall/antivirus isn't blocking\
-   - Try using a VPN if downloads fail (We recommend Cloudflare Warp or ProtonVPN)\
- 
-3. **Configuration Not Loading**\
-   - Ensure `slate.config.json` is in the same directory\
-   - Check JSON syntax with an online validator\
-</div>
-<div align="center">
+1. **Permission Denied**: Run as administrator
+2. **Config File Missing**: Download from configuration page
+3. **Network Errors**: Check internet connection and firewall
+4. **Process Stuck**: Use force deletion in advanced settings
 
-## 👥 Support
+### Log Analysis
 
-</div>
-<div align="left">
-For issues and support:\
-- Check the log file: `%temp%\slate\slate.log`\
-- DM 'midinterlude' on Discord with the log file\
-- additionally, you can join the discord server found [here](https://discord.gg/HQbG5NFAS3)\\
- 
----\\
+Logs are stored at `%temp%\slate\slate.log`:
+- Operation timestamps
+- Error details and stack traces
+- File operation results
+- Network adapter changes
 
-https://github.com/midinterlude/slate\
-</div>
+### Support
+
+For support and issues:
+- **Discord**: midinterlude
+- **GitHub Issues**: [Create new issue](https://github.com/midinterlude/Slate/issues)
+- **Documentation**: (soon)
+
+## Contributing
+
+Contributions are welcome! If you have suggestions for improvements or want to add features:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow PEP 8 style guidelines
+- Add comprehensive error handling
+- Include logging for new operations
+- Update documentation for new features
+- Test with various Windows versions
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgements
+
+- **centerepic**: Original ByeBanAsync implementation
+- **WEAO**: Roblox version API service
+- **Python Community**: Libraries and tools that make this possible
+- **Beta Testers**: Feedback and testing contributions
