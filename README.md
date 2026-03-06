@@ -26,7 +26,7 @@
   <a href="https://github.com/midinterlude/Slate/forks"><img src="https://img.shields.io/github/forks/midinterlude/Slate.svg?style=flat&colorA=080f12&colorB=1fa669"></a>
   <a href="https://github.com/midinterlude/Slate/issues"><img src="https://img.shields.io/github/issues/midinterlude/Slate.svg?style=flat&colorA=080f12&colorB=1fa669"></a>
   <a href="https://github.com/midinterlude"><img src="https://img.shields.io/badge/author-midinterlude-black?style=flat&logo=github&labelColor=%23101419&color=%232d2e30"></a>
-  <a href="https://discord.gg/bP3XKVRGmf"><img src="https://img.shields.io/badge/discord-midinterlude-blue?style=flat&logo=discord&labelColor=%235865F2&color=%235865F2"></a>
+  <a href="https://discord.gg/bP3XKVRGmf"><img src="https://img.shields.io/badge/discord-bP3XKVRGmf-blue?style=flat&logo=discord&labelColor=%235865F2&color=%235865F2"></a>
 </p>
 
 > Built with Python for comprehensive system cleaning and privacy protection. Designed specifically for Roblox users who need advanced anti-detection capabilities.
